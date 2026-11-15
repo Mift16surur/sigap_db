@@ -1,0 +1,43 @@
+[
+  {
+    "bed_id": "bed-vk-01",
+    "unit_id": "unit-vk",
+    "room_number": "VK-01",
+    "bed_code": "BED-VK-01",
+    "class_tier": "KELAS_1",
+    "status": "OCCUPIED"
+  },
+  {
+    "bed_id": "bed-vk-02",
+    "unit_id": "unit-vk",
+    "room_number": "VK-01",
+    "bed_code": "BED-VK-02",
+    "class_tier": "KELAS_1",
+    "status": "VACANT"
+  },
+  {
+    "bed_id": "bed-hcu-01",
+    "unit_id": "unit-hcu",
+    "room_number": "HCU-M1",
+    "bed_code": "BED-HCU-01",
+    "class_tier": "VIP_ICU",
+    "status": "OCCUPIED"
+  },
+  {
+    "bed_id": "bed-igd-01",
+    "unit_id": "unit-igd-ponek",
+    "room_number": "IGD-TRIASE",
+    "bed_code": "BED-IGD-01",
+    "class_tier": "IGD",
+    "status": "VACANT"
+  },
+  {
+    "bed_id": "bed-nifas-01",
+    "unit_id": "unit-nifas",
+    "room_number": "BOUGENVILLE-01",
+    "bed_code": "BED-NIFAS-01",
+    "class_tier": "KELAS_2",
+    "status": "VACANT"
+  }
+]
+

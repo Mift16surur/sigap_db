@@ -1,0 +1,287 @@
+// Prisma Schema for SIGAP Hospital Superapps
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Unit Fasilitas Kesehatan / RS
+model HospitalUnit {
+  unit_id       String     @id @default(uuid()) @db.VarChar(50)
+  code          String     @unique @db.VarChar(30)
+  name          String     @db.VarChar(100)
+  type          String     @db.VarChar(50)
+  active_status Boolean    @default(true)
+  users         User[]
+  admissions    Admission[]
+  beds          Bed[]
+
+  @@map("hospital_units")
+}
+
+// 2. Role Pengguna (RBAC)
+model Role {
+  role_id     String   @id @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  permissions Json     @default("[]")
+  users       User[]
+
+  @@map("roles")
+}
+
+// 3. Tabel Pengguna (Users)
+model User {
+  user_id           String        @id @default(uuid()) @db.VarChar(50)
+  role_id           String        @db.VarChar(50)
+  unit_id           String?       @db.VarChar(50)
+  username          String        @unique @db.VarChar(100)
+  full_name         String        @db.VarChar(150)
+  title_credentials String?       @db.VarChar(50)
+  password_hash     String        @db.VarChar(255)
+  active_status     Boolean       @default(true)
+  created_at        DateTime      @default(now()) @db.Timestamptz()
+  role              Role          @relation(fields: [role_id], references: [role_id])
+  unit              HospitalUnit? @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("users")
+}
+
+// 4. Tabel Master Pasien
+model Patient {
+  patient_id        String      @id @default(uuid()) @db.VarChar(50)
+  patient_code      String      @unique @db.VarChar(50)
+  mrn               String      @unique @db.VarChar(50)
+  full_name         String      @db.VarChar(150)
+  is_anonymous_mode Boolean     @default(false)
+  tanggal_lahir     DateTime?   @db.Date
+  age_years         Int
+  nik_masked        String?     @db.VarChar(50)
+  alamat_singkat    String?     @db.VarChar(255)
+  kontak_darurat    String?     @db.VarChar(255)
+  created_at        DateTime    @default(now()) @db.Timestamptz()
+  admissions        Admission[]
+
+  @@map("patients")
+}
+
+// 5. Episode Admisi Obstetri
+model Admission {
+  admission_id           String             @id @default(uuid()) @db.VarChar(50)
+  patient_id             String             @db.VarChar(50)
+  admission_code         String             @unique @db.VarChar(50)
+  admission_date         DateTime           @default(now()) @db.Timestamptz()
+  usia_kehamilan_minggu  Int                @default(0)
+  usia_kehamilan_hari    Int                @default(0)
+  jenis_admisi           String             @db.VarChar(50)
+  asal_rujukan           String?            @db.VarChar(100)
+  unit_id                String?            @db.VarChar(50)
+  status                 String             @default("ACTIVE") @db.VarChar(30)
+  keluhan_utama          String?            @db.Text
+  obstetric_history      Json               @default("{}")
+  created_by             String?            @db.VarChar(50)
+  attending_doctor_id    String?            @db.VarChar(50)
+  attending_doctor_name  String?            @db.VarChar(150)
+  receiving_midwife_id   String?            @db.VarChar(50)
+  receiving_midwife_name String?            @db.VarChar(150)
+  created_at             DateTime           @default(now()) @db.Timestamptz()
+  updated_at             DateTime           @default(now()) @db.Timestamptz()
+  patient                Patient            @relation(fields: [patient_id], references: [patient_id], onDelete: Cascade)
+  unit                   HospitalUnit?      @relation(fields: [unit_id], references: [unit_id])
+  pe_screenings          PeScreening[]
+  hpp_screenings         HppScreening[]
+  bp_measurements        BpMeasurement[]
+  blood_loss_entries     BloodLossEntry[]
+  monitoring_records     MonitoringRecord[]
+  sbar_handovers         SbarHandover[]
+  clinical_alerts        ClinicalAlert[]
+
+  @@map("admissions")
+}
+
+// 6. Skrining PE
+model PeScreening {
+  pe_screening_id              String          @id @default(uuid()) @db.VarChar(50)
+  admission_id                 String          @db.VarChar(50)
+  screening_time               DateTime        @default(now()) @db.Timestamptz()
+  started_at                   DateTime?       @db.Timestamptz()
+  completed_at                 DateTime?       @db.Timestamptz()
+  duration_seconds             Int?
+  status                       String          @default("IN_PROGRESS") @db.VarChar(30)
+  assessor_id                  String?         @db.VarChar(50)
+  kejang_eklamsia              String?         @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  kesadaran_menurun_gcs_rendah String?         @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  edema_paru_sesak_berat       String?         @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  oliguria_produksi_urin_rendah String?        @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  clinical_notes               String?         @db.Text
+  result_category              String?         @db.VarChar(30)
+  result_confidence_percent    Decimal?        @db.Decimal(5, 2)
+  result_summary               String?         @db.Text
+  updated_at                   DateTime        @default(now()) @db.Timestamptz()
+  admission                    Admission       @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+  bp_measurements              BpMeasurement[]
+
+  @@map("pe_screenings")
+}
+
+// 7. Pengukuran Tekanan Darah
+model BpMeasurement {
+  bp_id                  String        @id @default(uuid()) @db.VarChar(50)
+  pe_screening_id        String?       @db.VarChar(50)
+  admission_id           String        @db.VarChar(50)
+  sequence_number        Int
+  systolic               Int
+  diastolic              Int
+  mean_arterial_pressure Decimal?      @db.Decimal(5, 2)
+  heart_rate             Int?
+  measured_at            DateTime      @default(now()) @db.Timestamptz()
+  position               String?       @db.VarChar(50)
+  cuff_size              String?       @db.VarChar(50)
+  is_repeat_verification Boolean       @default(false)
+  assessor_id            String?       @db.VarChar(50)
+  note                   String?       @db.Text
+  admission              Admission     @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+  pe_screening           PeScreening?  @relation(fields: [pe_screening_id], references: [pe_screening_id], onDelete: Cascade)
+
+  @@map("bp_measurements")
+}
+
+// 8. Skrining HPP
+model HppScreening {
+  hpp_screening_id                String    @id @default(uuid()) @db.VarChar(50)
+  admission_id                    String    @db.VarChar(50)
+  screening_time                  DateTime  @default(now()) @db.Timestamptz()
+  started_at                      DateTime? @db.Timestamptz()
+  completed_at                    DateTime? @db.Timestamptz()
+  duration_seconds                Int?
+  status                          String    @default("IN_PROGRESS") @db.VarChar(30)
+  assessor_id                     String?   @db.VarChar(50)
+  tonus_atonia_uteri              String?   @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  trauma_laserasi_jalan_lahir     String?   @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  jaringan_retensio_sisa_plasenta String?   @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  trombin_koagulopati             String?   @default("BELUM_DIPERIKSA") @db.VarChar(30)
+  clinical_notes                  String?   @db.Text
+  result_category                 String?   @db.VarChar(30)
+  result_confidence_percent       Decimal?  @db.Decimal(5, 2)
+  result_summary                  String?   @db.Text
+  updated_at                      DateTime  @default(now()) @db.Timestamptz()
+  admission                       Admission @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+
+  @@map("hpp_screenings")
+}
+
+// 9. Perdarahan Kuantitatif
+model BloodLossEntry {
+  entry_id            String    @id @default(uuid()) @db.VarChar(50)
+  admission_id        String    @db.VarChar(50)
+  measurement_time    DateTime  @default(now()) @db.Timestamptz()
+  method              String    @db.VarChar(50)
+  dry_weight_grams    Decimal   @default(0) @db.Decimal(8, 2)
+  wet_weight_grams    Decimal   @default(0) @db.Decimal(8, 2)
+  volume_ml           Decimal   @db.Decimal(8, 2)
+  cumulative_total_ml Decimal   @db.Decimal(8, 2)
+  recorder_id         String?   @db.VarChar(50)
+  notes               String?   @db.Text
+  admission           Admission @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+
+  @@map("blood_loss_entries")
+}
+
+// 10. Monitoring Klinis & Tanda Vital
+model MonitoringRecord {
+  record_id                String    @id @default(uuid()) @db.VarChar(50)
+  admission_id             String    @db.VarChar(50)
+  recorded_at              DateTime  @default(now()) @db.Timestamptz()
+  recorded_by              String?   @db.VarChar(50)
+  systolic                 Int?
+  diastolic                Int?
+  heart_rate               Int?
+  respiratory_rate         Int?
+  oxygen_saturation        Decimal?  @db.Decimal(5, 2)
+  temperature_c            Decimal?  @db.Decimal(4, 2)
+  urine_output_ml_per_hour Decimal?  @db.Decimal(6, 2)
+  meows_score              Int?
+  fetal_heart_rate         Int?
+  fundal_height_contraction String?  @db.VarChar(100)
+  notes                    String?   @db.Text
+  admission                Admission @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+
+  @@map("monitoring_records")
+}
+
+// 11. Handoff SBAR
+model SbarHandover {
+  sbar_id        String    @id @default(uuid()) @db.VarChar(50)
+  admission_id   String    @db.VarChar(50)
+  created_at     DateTime  @default(now()) @db.Timestamptz()
+  created_by     String?   @db.VarChar(50)
+  situation      String    @db.Text
+  background     String    @db.Text
+  assessment     String    @db.Text
+  recommendation String    @db.Text
+  target_role    String?   @db.VarChar(50)
+  target_user_id String?   @db.VarChar(50)
+  read_status    Boolean   @default(false)
+  read_at        DateTime? @db.Timestamptz()
+  admission      Admission @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+
+  @@map("sbar_handovers")
+}
+
+// 12. Peringatan Klinis (CDSS Alerts)
+model ClinicalAlert {
+  alert_id         String    @id @default(uuid()) @db.VarChar(50)
+  admission_id     String    @db.VarChar(50)
+  rule_id          String    @db.VarChar(50)
+  severity         String    @db.VarChar(30)
+  category         String    @db.VarChar(50)
+  title            String    @db.VarChar(150)
+  message          String    @db.Text
+  recommendations  Json      @default("[]")
+  triggered_at     DateTime  @default(now()) @db.Timestamptz()
+  status           String    @default("OPEN") @db.VarChar(30)
+  acknowledged_by  String?   @db.VarChar(50)
+  acknowledged_at  DateTime? @db.Timestamptz()
+  resolved_by      String?   @db.VarChar(50)
+  resolved_at      DateTime? @db.Timestamptz()
+  resolution_notes String?   @db.Text
+  admission        Admission @relation(fields: [admission_id], references: [admission_id], onDelete: Cascade)
+
+  @@map("clinical_alerts")
+}
+
+// 13. Audit Log
+model AuditLog {
+  audit_id              String   @id @default(uuid()) @db.VarChar(50)
+  timestamp             DateTime @default(now()) @db.Timestamptz()
+  user_id               String   @db.VarChar(50)
+  user_name             String?  @db.VarChar(150)
+  user_role             String?  @db.VarChar(50)
+  entity                String   @db.VarChar(100)
+  entity_id             String   @db.VarChar(100)
+  action                String   @db.VarChar(30)
+  change_summary        String   @db.Text
+  protocol_version_ref  String?  @db.VarChar(50)
+
+  @@map("audit_logs")
+}
+
+// 14. Tempat Tidur / Bangsal Obstetri (Bed)
+model Bed {
+  bed_id        String        @id @default(uuid()) @db.VarChar(50)
+  unit_id       String        @db.VarChar(50)
+  room_number   String        @db.VarChar(30)
+  bed_code      String        @unique @db.VarChar(30)
+  class_tier    String        @db.VarChar(30)
+  status        String        @default("VACANT") @db.VarChar(30)
+  unit          HospitalUnit  @relation(fields: [unit_id], references: [unit_id])
+
+  @@map("bed_master")
+}
+
+

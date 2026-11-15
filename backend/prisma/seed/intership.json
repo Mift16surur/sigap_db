@@ -1,0 +1,30 @@
+[
+  {
+    "internship_id": "intern-01",
+    "nama_magang": "dr. Fathia Wardani",
+    "institusi": "Universitas Indonesia - Fakultas Kedokteran",
+    "periode_mulai": "2026-08-01",
+    "periode_akhir": "2027-02-01",
+    "supervisor_id": "usr-dokter-01",
+    "status": "ACTIVE"
+  },
+  {
+    "internship_id": "intern-02",
+    "nama_magang": "Bd. Anisa Larasati",
+    "institusi": "Poltekkes Kemenkes Jakarta III - Kebidanan",
+    "periode_mulai": "2026-09-01",
+    "periode_akhir": "2027-03-01",
+    "supervisor_id": "usr-bidan-01",
+    "status": "ACTIVE"
+  },
+  {
+    "internship_id": "intern-03",
+    "nama_magang": "dr. Reza Pratama",
+    "institusi": "Universitas Airlangga - Profesi Dokter",
+    "periode_mulai": "2026-07-01",
+    "periode_akhir": "2027-01-01",
+    "supervisor_id": "usr-validator-01",
+    "status": "ACTIVE"
+  }
+]
+

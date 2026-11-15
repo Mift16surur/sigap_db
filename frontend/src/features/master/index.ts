@@ -1,0 +1,1 @@
+export { PatientMasterView } from "./PatientMasterView";

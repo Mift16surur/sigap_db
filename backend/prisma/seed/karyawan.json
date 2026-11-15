@@ -1,0 +1,75 @@
+[
+  {
+    "karyawan_id": "kry-001",
+    "nik": "3171012345670001",
+    "nama_lengkap": "dr. Sari Dewi, Sp.OG",
+    "jabatan": "Dokter Spesialis Obstetri & Ginekologi (DPJP)",
+    "unit_kerja": "Kamar Bersalin (VK)",
+    "status_kerja": "TETAP",
+    "tanggal_masuk": "2020-01-15",
+    "email": "dr.sari@rsudmitra.co.id",
+    "nomor_hp": "081234567801",
+    "active_status": true
+  },
+  {
+    "karyawan_id": "kry-002",
+    "nik": "3171012345670002",
+    "nama_lengkap": "Bd. Ratna Kusuma, S.Tr.Keb",
+    "jabatan": "Bidan Pelaksana VK Bersalin",
+    "unit_kerja": "Kamar Bersalin (VK)",
+    "status_kerja": "TETAP",
+    "tanggal_masuk": "2021-03-01",
+    "email": "bidan.ratna@rsudmitra.co.id",
+    "nomor_hp": "081234567802",
+    "active_status": true
+  },
+  {
+    "karyawan_id": "kry-003",
+    "nik": "3171012345670003",
+    "nama_lengkap": "Dr. dr. Hendra Wijaya, Sp.OG, Subsp.K.Fm",
+    "jabatan": "Ketua Komite Medik / Validator Klinis",
+    "unit_kerja": "Komite Mutu & Medik",
+    "status_kerja": "TETAP",
+    "tanggal_masuk": "2018-06-10",
+    "email": "dr.hendra@rsudmitra.co.id",
+    "nomor_hp": "081234567803",
+    "active_status": true
+  },
+  {
+    "karyawan_id": "kry-004",
+    "nik": "3171012345670004",
+    "nama_lengkap": "Nadia Putri, S.KM, M.Kes",
+    "jabatan": "Koordinator Mutu & Administrasi RS",
+    "unit_kerja": "Manajemen Mutu Pelayanan",
+    "status_kerja": "TETAP",
+    "tanggal_masuk": "2022-01-10",
+    "email": "nadia.putri@rsudmitra.co.id",
+    "nomor_hp": "081234567804",
+    "active_status": true
+  },
+  {
+    "karyawan_id": "kry-005",
+    "nik": "3171012345670005",
+    "nama_lengkap": "Budi Santoso, S.Kom",
+    "jabatan": "Administrator Sistem & Keamanan TI",
+    "unit_kerja": "Teknologi Informasi & SIMRS",
+    "status_kerja": "TETAP",
+    "tanggal_masuk": "2021-11-01",
+    "email": "budi.santoso@rsudmitra.co.id",
+    "nomor_hp": "081234567805",
+    "active_status": true
+  },
+  {
+    "karyawan_id": "kry-006",
+    "nik": "3171012345670006",
+    "nama_lengkap": "Tri Ambarwati, S.Tr.Keb, M.Kes",
+    "jabatan": "Dewan Pengawas / Validator Klinis",
+    "unit_kerja": "Komite Mutu",
+    "status_kerja": "TETAP",
+    "tanggal_masuk": "2019-04-12",
+    "email": "tri.ambar@rsudmitra.co.id",
+    "nomor_hp": "081234567806",
+    "active_status": true
+  }
+]
+

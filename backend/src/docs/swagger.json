@@ -1,0 +1,468 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "SIGAP — API Skrining Admisi PE & HPP Kebidanan",
+    "version": "1.0.0",
+    "description": "Dokumentasi REST API Sistem Informasi & Clinical Decision Support System (CDSS) Skrining Admisi Preeklamsia dan Hemoragia Postpartum (HPP 4T) berbasis Protokol Evidence-Based WHO & POGI."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000/api/v1",
+      "description": "Server Backend Lokal (Port 4000)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Bootstrap",
+      "description": "Inisialisasi state aplikasi, metrik evaluasi ADDIE, dan sinkronisasi awal"
+    },
+    {
+      "name": "Autentikasi & RBAC",
+      "description": "Login, switch role 5 aktor, dan struktur hak akses 3 kolom (User, Role, Menu)"
+    },
+    {
+      "name": "Pasien",
+      "description": "Pendaftaran pasien baru (Mode Identitas Rekam Medis & Mode Anonim Penelitian)"
+    },
+    {
+      "name": "Admisi",
+      "description": "Pencatatan episode rawat inap kebidanan, usia gestasi, paritas G/P/A, dan alokasi DPJP"
+    },
+    {
+      "name": "Skrining PE",
+      "description": "Pengukuran tensi berulang (FR-07), deteksi kriteria berat, dan evaluasi preeklamsia (Hijau/Kuning/Merah)"
+    },
+    {
+      "name": "Skrining HPP 4T",
+      "description": "Evaluasi domain 4T (Tonus, Trauma, Tissue, Thrombin) dan peringatan perdarahan masif"
+    },
+    {
+      "name": "Monitoring & SBAR",
+      "description": "Pencatatan timbang darah gravimetrik, pemantauan tanda vital/MEOWS, dan handover SBAR"
+    },
+    {
+      "name": "Master & Protokol",
+      "description": "Katalog master tenaga medis, ruang rawat inap, dan manajemen versi protokol klinis"
+    }
+  ],
+  "paths": {
+    "/bootstrap": {
+      "get": {
+        "tags": ["Bootstrap"],
+        "summary": "Ambil data awal aplikasi & protokol aktif",
+        "description": "Mengembalikan seluruh episode admisi yang diperkaya (enriched), protokol aktif, dan metrik riset.",
+        "responses": {
+          "200": {
+            "description": "State awal berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": { "type": "boolean", "example": true },
+                    "active_protocol": { "type": "object" },
+                    "enriched_admissions": { "type": "array", "items": { "type": "object" } },
+                    "evaluation_metrics": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Bootstrap"],
+        "summary": "Reset database ke data simulasi / seed",
+        "description": "Mengembalikan database ke kondisi awal pengujian riset.",
+        "responses": {
+          "200": {
+            "description": "Database berhasil di-reset"
+          }
+        }
+      }
+    },
+    "/auth": {
+      "post": {
+        "tags": ["Autentikasi & RBAC"],
+        "summary": "Autentikasi pengguna, ganti role, atau kelola hak akses",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["LOGIN", "SWITCH_ROLE", "GET_RBAC_DATA", "UPDATE_USER_ROLE", "UPDATE_ROLE_MENU"],
+                    "example": "LOGIN"
+                  },
+                  "username": { "type": "string", "example": "bidan" },
+                  "password": { "type": "string", "example": "bidan123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operasi auth berhasil"
+          }
+        }
+      }
+    },
+    "/patients": {
+      "get": {
+        "tags": ["Pasien"],
+        "summary": "Daftar seluruh pasien terdaftar",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Kata kunci pencarian (Nama, No RM, NIK, Kode Pasien)",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar pasien berhasil diambil"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Pasien"],
+        "summary": "Registrasi pasien baru",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["full_name"],
+                "properties": {
+                  "full_name": { "type": "string", "example": "andini" },
+                  "mrn": { "type": "string", "example": "442992" },
+                  "tanggal_lahir": { "type": "string", "format": "date", "example": "1999-11-16" },
+                  "age_years": { "type": "number", "example": 27 },
+                  "nik_masked": { "type": "string", "example": "33020911611990001" },
+                  "alamat_singkat": { "type": "string", "example": "ahmad yani" },
+                  "kontak_darurat": { "type": "string", "example": "082134349394" },
+                  "is_anonymous_mode": { "type": "boolean", "example": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pasien baru berhasil didaftarkan"
+          },
+          "409": {
+            "description": "Nomor Rekam Medis (MRN) duplikat"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Pasien"],
+        "summary": "Pembaruan data pasien",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["patient_id"],
+                "properties": {
+                  "patient_id": { "type": "string", "example": "pat-1731427200000" },
+                  "full_name": { "type": "string", "example": "andini" },
+                  "mrn": { "type": "string", "example": "442992" },
+                  "tanggal_lahir": { "type": "string", "format": "date", "example": "1999-11-16" },
+                  "age_years": { "type": "number", "example": 27 },
+                  "nik_masked": { "type": "string", "example": "33020911611990001" },
+                  "alamat_singkat": { "type": "string", "example": "ahmad yani" },
+                  "kontak_darurat": { "type": "string", "example": "082134349394" },
+                  "is_anonymous_mode": { "type": "boolean", "example": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data pasien berhasil diperbarui"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Pasien"],
+        "summary": "Hapus data pasien dan admisi terkait",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data pasien berhasil dihapus"
+          }
+        }
+      }
+    },
+    "/admissions": {
+      "get": {
+        "tags": ["Admisi"],
+        "summary": "Daftar episode admisi rawat inap",
+        "responses": {
+          "200": {
+            "description": "Daftar episode admisi"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admisi"],
+        "summary": "Buat episode admisi rawat inap baru",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["patient_id", "gestational_age_weeks", "admission_type"],
+                "properties": {
+                  "patient_id": { "type": "string", "example": "pat-001" },
+                  "gestational_age_weeks": { "type": "number", "example": 38 },
+                  "gestational_age_days": { "type": "number", "example": 2 },
+                  "admission_type": { "type": "string", "example": "ADM_INPARTU" },
+                  "unit_id": { "type": "string", "example": "unit-vk" },
+                  "keluhan_utama": { "type": "string", "example": "Kenceng-kenceng teratur sejak 6 jam lalu" },
+                  "attending_doctor_id": { "type": "string", "example": "doc-01" },
+                  "gravida": { "type": "number", "example": 2 },
+                  "para": { "type": "number", "example": 1 },
+                  "abortus": { "type": "number", "example": 0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Episode admisi baru berhasil dibuat"
+          }
+        }
+      }
+    },
+    "/screening/pe": {
+      "post": {
+        "tags": ["Skrining PE"],
+        "summary": "Input pengukuran tekanan darah atau evaluasi preeklamsia",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["admission_id", "action"],
+                "properties": {
+                  "admission_id": { "type": "string", "example": "adm-001" },
+                  "action": {
+                    "type": "string",
+                    "enum": ["ADD_BP_MEASUREMENT", "EVALUATE_PE"],
+                    "example": "ADD_BP_MEASUREMENT"
+                  },
+                  "systolic": { "type": "number", "example": 165 },
+                  "diastolic": { "type": "number", "example": 110 },
+                  "heart_rate": { "type": "number", "example": 92 },
+                  "position": { "type": "string", "example": "DUDUK_BERSANDAR" },
+                  "cuff_size": { "type": "string", "example": "STANDAR_DEWASA" },
+                  "kejang_eklamsia": { "type": "string", "example": "TIDAK" },
+                  "kesadaran_menurun_gcs_rendah": { "type": "string", "example": "TIDAK" },
+                  "edema_paru_sesak_berat": { "type": "string", "example": "TIDAK" },
+                  "oliguria_produksi_urin_rendah": { "type": "string", "example": "TIDAK" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skrining PE dievaluasi / Pengukuran tensi disimpan"
+          }
+        }
+      }
+    },
+    "/screening/hpp": {
+      "post": {
+        "tags": ["Skrining HPP 4T"],
+        "summary": "Evaluasi faktor risiko 4T perdarahan pascapersalinan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["admission_id"],
+                "properties": {
+                  "admission_id": { "type": "string", "example": "adm-001" },
+                  "perdarahan_aktif_saat_admisi": { "type": "string", "example": "TIDAK" },
+                  "syok_hemodinamik_instabil": { "type": "string", "example": "TIDAK" },
+                  "rencana_metode_persalinan": { "type": "string", "example": "PERVAGINAM_SPONTAN" },
+                  "risk_details": { "type": "array", "items": { "type": "object" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skrining HPP 4T selesai dievaluasi"
+          }
+        }
+      }
+    },
+    "/monitoring": {
+      "post": {
+        "tags": ["Monitoring & SBAR"],
+        "summary": "Input monitoring tanda vital, timbang darah gravimetrik, atau SBAR",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["admission_id", "action"],
+                "properties": {
+                  "admission_id": { "type": "string", "example": "adm-001" },
+                  "action": {
+                    "type": "string",
+                    "enum": ["ADD_VITAL_SIGNS", "ADD_BLOOD_LOSS", "ACKNOWLEDGE_ALERT", "SUBMIT_SBAR"],
+                    "example": "ADD_BLOOD_LOSS"
+                  },
+                  "dry_weight_g": { "type": "number", "example": 50 },
+                  "wet_weight_g": { "type": "number", "example": 450 },
+                  "collection_method": { "type": "string", "example": "GRAVIMETRIC_SCALE" },
+                  "item_type": { "type": "string", "example": "UNDERPAD_KASA" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data monitoring berhasil dicatat"
+          }
+        }
+      }
+    },
+    "/masters": {
+      "get": {
+        "tags": ["Master & Protokol"],
+        "summary": "Ambil data master katalog (dokter, bidan, unit rawat, fasilitas perujuk, template)",
+        "responses": {
+          "200": {
+            "description": "Katalog master berhasil diambil"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Master & Protokol"],
+        "summary": "Kelola data master (Tambah, Edit, Hapus Unit, Fasilitas Rujukan, Dokter, Staf)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "ADD_UNIT_MASTER",
+                      "UPDATE_UNIT_MASTER",
+                      "DELETE_UNIT_MASTER",
+                      "ADD_REFERRAL_MASTER",
+                      "UPDATE_REFERRAL_MASTER",
+                      "DELETE_REFERRAL_MASTER",
+                      "ADD_DOCTOR_MASTER",
+                      "UPDATE_DOCTOR_MASTER",
+                      "DELETE_DOCTOR_MASTER",
+                      "ADD_MIDWIFE_NURSE_MASTER",
+                      "UPDATE_MIDWIFE_NURSE_MASTER",
+                      "DELETE_MIDWIFE_NURSE_MASTER"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "updateUnit": {
+                  "summary": "Perbarui Unit Pelayanan",
+                  "value": {
+                    "action": "UPDATE_UNIT_MASTER",
+                    "unit_id": "unit-vk",
+                    "code": "VK-BERSALIN",
+                    "name": "Kamar Bersalin (VK Utama)",
+                    "type": "VK_BERSALIN"
+                  }
+                },
+                "deleteUnit": {
+                  "summary": "Hapus Unit Pelayanan",
+                  "value": {
+                    "action": "DELETE_UNIT_MASTER",
+                    "unit_id": "unit-1731427200000"
+                  }
+                },
+                "updateReferral": {
+                  "summary": "Perbarui Fasilitas Perujuk",
+                  "value": {
+                    "action": "UPDATE_REFERRAL_MASTER",
+                    "referral_id": "ref-01",
+                    "facility_name": "Puskesmas Somagede PONED",
+                    "facility_type": "PUSKESMAS_PONED",
+                    "district_city": "Kabupaten Banyumas",
+                    "subdistrict": "Somagede",
+                    "contact_phone": "0281-796123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aksi data master berhasil dieksekusi"
+          },
+          "400": {
+            "description": "Permintaan tidak valid"
+          },
+          "404": {
+            "description": "Entitas master tidak ditemukan"
+          }
+        }
+      }
+    },
+    "/protocols": {
+      "get": {
+        "tags": ["Master & Protokol"],
+        "summary": "Ambil riwayat versi protokol klinis",
+        "responses": {
+          "200": {
+            "description": "Daftar protokol klinis"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Master & Protokol"],
+        "summary": "Validasi protokol klinis baru atau input kuesioner SUS",
+        "responses": {
+          "200": {
+            "description": "Aksi protokol berhasil"
+          }
+        }
+      }
+    }
+  }
+}
