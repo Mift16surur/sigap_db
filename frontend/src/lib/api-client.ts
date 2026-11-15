@@ -14,9 +14,16 @@ import type {
   SigapDatabase,
 } from "@/lib/types";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" ? "/api/v1" : "http://localhost:4000/api/v1");
+function resolveApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (envUrl) {
+    const clean = envUrl.replace(/\/+$/, "");
+    return clean.endsWith("/api/v1") ? clean : `${clean}/api/v1`;
+  }
+  return typeof window !== "undefined" ? "/api/v1" : "http://localhost:4000/api/v1";
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export interface EnrichedAdmission extends Admission {
   patient?: Patient;

@@ -205,7 +205,13 @@ export default function SigapApplicationPage() {
             </p>
           </div>
           <div className="pt-3 border-t border-slate-800/80 text-[11px] text-slate-500">
-            Jika proses ini memakan waktu, pastikan Backend API berjalan di port 4000 (<code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-400">npm run dev:backend</code> atau <code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-400">npm run dev</code>).
+            {API_BASE_URL.includes("localhost") ? (
+              <>
+                Jika proses ini memakan waktu, pastikan Backend API berjalan di port 4000 (<code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-400">npm run dev:backend</code> atau <code className="font-mono bg-slate-900 px-1 py-0.5 rounded text-slate-400">npm run dev</code>).
+              </>
+            ) : (
+              <>Menghubungkan ke server Backend di <span className="font-mono text-blue-400">{API_BASE_URL}</span></>
+            )}
           </div>
         </div>
       </div>
@@ -223,7 +229,9 @@ export default function SigapApplicationPage() {
             <div>
               <h3>Koneksi Backend Terputus</h3>
               <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
-                Backend API di port 4000 belum aktif atau terputus
+                {API_BASE_URL.includes("localhost")
+                  ? "Backend API di port 4000 belum aktif atau terputus"
+                  : `Tidak dapat menjangkau server Backend (${API_BASE_URL})`}
               </p>
             </div>
           </div>
