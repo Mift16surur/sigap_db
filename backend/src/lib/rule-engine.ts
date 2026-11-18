@@ -354,7 +354,10 @@ export function evaluatePeScreening(input: PeEvaluationInput): ScreeningResult {
     }
   }
 
-  // 6. Penentuan Kategori Risiko PE (LOW | MODERATE | HIGH | UNDETERMINED)
+  // 6. Penentuan Kategori Risiko PE Sesuai Tabel 1 Template SIGAP:
+  // - Risiko Berat (HIGH): TD >= 160/110, tanda pemberatan (gejala berat), kejang eklamsia, lab abnormal
+  // - Risiko Sedang (MODERATE): TD 140-159/90-109, Protein urin >= +1, atau >= 1 faktor risiko tinggi / >= 2 faktor risiko sedang tanpa tanda pemberatan
+  // - Risiko Rendah (LOW): TD < 140/90, tanpa keluhan, tanpa riwayat/faktor risiko tinggi, tanpa proteinuria
   let category: RiskCategory = "LOW";
   let summaryHeadline = "";
 
@@ -363,26 +366,22 @@ export function evaluatePeScreening(input: PeEvaluationInput): ScreeningResult {
     crisisBpCount > 0 ||
     severeSymptomCount > 0 ||
     hasLabOrganDysfunction ||
-    (hypertensionBpCount > 0 && hasProteinuria);
+    (hypertensionBpCount > 0 && hasProteinuria && severeSymptomCount > 0);
 
-  if (
-    hasSevereClinicalOrBp ||
-    highRiskFactorCount >= cfg.min_high_risk_factors_for_high ||
-    moderateRiskFactorCount >= cfg.min_moderate_risk_factors_for_high
-  ) {
+  if (hasSevereClinicalOrBp) {
     category = "HIGH";
     summaryHeadline = priorityAlertTriggered
-      ? "Risiko Preeklamsia TINGGI dengan Pemicu Prioritas / Gambaran Berat — Eskalasi Segera"
-      : "Risiko Preeklamsia TINGGI — Memerlukan Pemantauan Ketat & Evaluasi Dokter";
+      ? "Risiko Preeklamsia BERAT dengan Pemicu Prioritas / Tanda Pemberatan — Respons Cepat 30–60 Menit"
+      : "Risiko Preeklamsia BERAT (Severe PE) — Memerlukan Pemantauan Ketat & Evaluasi Sp.OG";
   } else if (
     hypertensionBpCount > 0 ||
     hasProteinuria ||
+    highRiskFactorCount >= 1 ||
     moderateRiskFactorCount >= cfg.min_moderate_risk_factors_for_moderate
   ) {
-    // Jika masih ada tanda vital utama yang belum diukur sama sekali, beri catatan
     category = "MODERATE";
     summaryHeadline =
-      "Risiko Preeklamsia SEDANG — Pantau Berkala & Lengkapi Pemeriksaan Penunjang";
+      "Risiko Preeklamsia SEDANG — Pantau Berkala, Istirahatkan Ibu, Evaluasi TD Ulang >= 15 Menit";
   } else if (missingFields.length > 0) {
     // Bab 6 & Bab 13: Data belum cukup tidak boleh otomatis dianggap LOW/Normal
     category = "UNDETERMINED";

@@ -155,6 +155,35 @@ export async function POST(req: Request) {
   if (body.clinical_notes !== undefined)
     peScreening.clinical_notes = body.clinical_notes;
 
+  // Simpan pengukuran tekanan darah (Dua Kali Pengukuran) bila dikirim dari form terpadu
+  if (Array.isArray(body.bp_measurements) && body.bp_measurements.length > 0) {
+    db.bp_measurements = db.bp_measurements.filter(
+      (b) => b.admission_id !== admission_id
+    );
+    body.bp_measurements.forEach((bp: any, idx: number) => {
+      const sbp = Number(bp.systolic);
+      const dbp = Number(bp.diastolic);
+      if (!sbp || !dbp) return;
+      const map = Math.round((sbp + 2 * dbp) / 3);
+      db.bp_measurements.push({
+        bp_id: `bp-${Date.now()}-${idx}`,
+        pe_screening_id: peScreening!.pe_screening_id,
+        admission_id,
+        sequence_number: idx + 1,
+        systolic: sbp,
+        diastolic: dbp,
+        mean_arterial_pressure: map,
+        heart_rate: bp.heart_rate ? Number(bp.heart_rate) : undefined,
+        measured_at: bp.measured_at || now,
+        position: bp.position || "DUDUK_BERSANDAR",
+        cuff_size: bp.cuff_size || "STANDAR_DEWASA",
+        is_repeat_verification: idx > 0,
+        assessor_id: userId,
+        note: bp.note || (idx === 0 ? "Pengukuran TD ke-1 (Awal Admisi)" : "Pengukuran TD ke-2 (Konfirmasi/Ulang)"),
+      });
+    });
+  }
+
   // Update gejala PE (5-status eksplisit)
   if (Array.isArray(body.symptoms)) {
     for (const symInput of body.symptoms as Array<{
