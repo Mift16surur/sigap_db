@@ -31,6 +31,9 @@ import {
   Unlock,
   ArrowRight,
   Loader2,
+  Gauge,
+  TestTube,
+  AlertOctagon,
 } from "lucide-react";
 import { apiRequest, EnrichedAdmission } from "@/services/api-client";
 import type {
@@ -58,91 +61,128 @@ interface UnifiedClinicalScreeningViewProps {
   onNavigateRpp?: () => void;
 }
 
-// 7 Kategori Pengkajian Risiko Klinis Maternal & Obstetri dengan Warna Lembut-Sedang (Level 200–250)
-const RISK_CATEGORIES = [
+// Struktur 4 DOMAIN Pengkajian Skrining Klinis SIGAP Sesuai Format Permintaan:
+// 1. DOMAIN MATERNAL (Kondisi & Riwayat Ibu)
+// 2. DOMAIN OBSTETRI (Proses, Tindakan & Riwayat Persalinan)
+// 3. DOMAIN JANIN (Kondisi & Jumlah Janin)
+// 4. DOMAIN KOMBINASI RISIKO
+export interface ScreeningDomainItem {
+  id: string;
+  label: string;
+  riskTier: "LOW" | "MODERATE" | "HIGH";
+}
+
+export interface ScreeningDomainGroup {
+  id: string;
+  name: string;
+  title: string;
+  subtitle: string;
+  icon: any;
+  headerGradient: string;
+  cardBorder: string;
+  iconStyle: string;
+  badgeStyle: string;
+  chevronStyle: string;
+  items: ScreeningDomainItem[];
+}
+
+export const CLINICAL_SCREENING_DOMAINS: ScreeningDomainGroup[] = [
   {
-    id: "MATERNAL",
-    label: "MATERNAL",
-    domain: "TONUS" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-rose-200 via-rose-200/90 to-pink-200/80 dark:from-rose-950/70 dark:via-rose-900/60 dark:to-pink-950/50 text-rose-950 dark:text-rose-100 border-b-2 border-rose-300/90 dark:border-rose-800",
-    cardBorder: "border-2 border-rose-300/90 dark:border-rose-800/80 shadow-[0_2px_12px_rgba(244,63,94,0.06)]",
-    iconStyle: "bg-rose-500/20 text-rose-800 dark:text-rose-200 border border-rose-300/80 dark:border-rose-700",
-    badgeStyle: "bg-white/90 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 border border-rose-300/80 dark:border-rose-700",
-    chevronStyle: "text-rose-800 dark:text-rose-200 bg-white/70 dark:bg-rose-900/50",
-    indentLine: "border-l-4 border-l-rose-400 dark:border-l-rose-500 bg-rose-50/40 dark:bg-rose-950/20",
+    id: "DOMAIN_MATERNAL",
+    name: "MATERNAL",
+    title: "1. DOMAIN MATERNAL (Kondisi & Riwayat Ibu)",
+    subtitle: "Evaluasi tekanan darah, gejala pemberatan, proteinuria, hematologi & komplikasi maternal",
     icon: HeartPulse,
+    headerGradient: "bg-gradient-to-r from-rose-100 via-rose-100/90 to-pink-100/80 dark:from-rose-950/70 dark:via-rose-900/60 dark:to-pink-950/50 text-rose-950 dark:text-rose-100 border-b-2 border-rose-300 dark:border-rose-800",
+    cardBorder: "border-2 border-rose-300/90 dark:border-rose-800 shadow-[0_2px_12px_rgba(244,63,94,0.06)]",
+    iconStyle: "bg-rose-500/20 text-rose-800 dark:text-rose-200 border border-rose-300/80 dark:border-rose-700",
+    badgeStyle: "bg-white/90 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200 border border-rose-300 dark:border-rose-700",
+    chevronStyle: "text-rose-800 dark:text-rose-200 bg-white/70 dark:bg-rose-900/50",
+    items: [
+      // RISIKO RENDAH
+      { id: "mat_low_normal", label: "Tekanan darah normal (< 140/90 mmHg) & kadar Hb >= 11 g/dL", riskTier: "LOW" },
+      { id: "mat_low_no_symptoms_risk", label: "Tanpa gejala subjektif pemberatan, proteinuria, maupun riwayat risiko tinggi", riskTier: "LOW" },
+
+      // RISIKO SEDANG
+      { id: "mat_mod_bp", label: "Tekanan darah 140–159 / 90–109 mmHg (pada 1 kali pengukuran)", riskTier: "MODERATE" },
+      { id: "mat_mod_proteinuria", label: "Protein urin positif (dipstik >= +1 atau uPCR >= 0,3)", riskTier: "MODERATE" },
+      { id: "mat_mod_anemia", label: "Anemia ringan–sedang (Hb 7–10,9 g/dL)", riskTier: "MODERATE" },
+      { id: "mat_mod_obesity_multipara", label: "Obesitas atau Grandemultipara", riskTier: "MODERATE" },
+      { id: "mat_mod_pe_mild", label: "Preeklamsia tanpa tanda berat", riskTier: "MODERATE" },
+
+      // RISIKO TINGGI
+      { id: "mat_high_bp", label: "Tekanan darah >= 160/110 mmHg (menetap >= 15 menit)", riskTier: "HIGH" },
+      { id: "mat_high_severe_symptoms", label: "Terdapat tanda pemberatan (nyeri kepala hebat, gangguan penglihatan, nyeri epigastrium, edema paru)", riskTier: "HIGH" },
+      { id: "mat_high_eclampsia", label: "Terjadi kejang (eklamsia)", riskTier: "HIGH" },
+      { id: "mat_high_lab_abnormal", label: "Hasil lab abnormal (trombosit < 100.000/uL, enzim transaminase >= 2x normal, atau kreatinin > 1,1 mg/dL)", riskTier: "HIGH" },
+      { id: "mat_high_severe_anemia", label: "Anemia berat (Hb < 7 g/dL)", riskTier: "HIGH" },
+      { id: "mat_high_prev_hpp_bleeding", label: "Riwayat HPP sebelumnya atau perdarahan antepartum aktif", riskTier: "HIGH" },
+      { id: "mat_high_severe_pe_hellp", label: "Preeklamsia berat atau sindrom HELLP", riskTier: "HIGH" },
+    ],
   },
   {
-    id: "OBSTETRI",
-    label: "OBSTETRI",
-    domain: "TRAUMA" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-blue-200 via-blue-200/90 to-indigo-200/80 dark:from-blue-950/70 dark:via-blue-900/60 dark:to-indigo-950/50 text-blue-950 dark:text-blue-100 border-b-2 border-blue-300/90 dark:border-blue-800",
-    cardBorder: "border-2 border-blue-300/90 dark:border-blue-800/80 shadow-[0_2px_12px_rgba(37,99,235,0.06)]",
-    iconStyle: "bg-blue-500/20 text-blue-800 dark:text-blue-200 border border-blue-300/80 dark:border-blue-700",
-    badgeStyle: "bg-white/90 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 border border-blue-300/80 dark:border-blue-700",
-    chevronStyle: "text-blue-800 dark:text-blue-200 bg-white/70 dark:bg-blue-900/50",
-    indentLine: "border-l-4 border-l-blue-400 dark:border-l-blue-500 bg-blue-50/40 dark:bg-blue-950/20",
+    id: "DOMAIN_OBSTETRI",
+    name: "OBSTETRI",
+    title: "2. DOMAIN OBSTETRI (Proses, Tindakan & Riwayat Persalinan)",
+    subtitle: "Evaluasi riwayat persalinan sesarea, induksi / partus memanjang & spektrum plasenta akreta",
     icon: Stethoscope,
+    headerGradient: "bg-gradient-to-r from-blue-100 via-blue-100/90 to-indigo-100/80 dark:from-blue-950/70 dark:via-blue-900/60 dark:to-indigo-950/50 text-blue-950 dark:text-blue-100 border-b-2 border-blue-300 dark:border-blue-800",
+    cardBorder: "border-2 border-blue-300/90 dark:border-blue-800 shadow-[0_2px_12px_rgba(37,99,235,0.06)]",
+    iconStyle: "bg-blue-500/20 text-blue-800 dark:text-blue-200 border border-blue-300/80 dark:border-blue-700",
+    badgeStyle: "bg-white/90 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-700",
+    chevronStyle: "text-blue-800 dark:text-blue-200 bg-white/70 dark:bg-blue-900/50",
+    items: [
+      // RISIKO RENDAH
+      { id: "obs_low_normal", label: "Tidak ada faktor risiko obstetri / HPP saat admisi", riskTier: "LOW" },
+
+      // RISIKO SEDANG
+      { id: "obs_mod_induction", label: "Induksi atau augmentasi persalinan", riskTier: "MODERATE" },
+      { id: "obs_mod_prev_sc", label: "Riwayat seksio sesarea 1x", riskTier: "MODERATE" },
+
+      // RISIKO TINGGI
+      { id: "obs_high_placenta_previa", label: "Plasenta previa atau spektrum akreta", riskTier: "HIGH" },
+    ],
   },
   {
-    id: "JANIN",
-    label: "JANIN",
-    domain: "JARINGAN" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-purple-200 via-purple-200/90 to-violet-200/80 dark:from-purple-950/70 dark:via-purple-900/60 dark:to-violet-950/50 text-purple-950 dark:text-purple-100 border-b-2 border-purple-300/90 dark:border-purple-800",
-    cardBorder: "border-2 border-purple-300/90 dark:border-purple-800/80 shadow-[0_2px_12px_rgba(147,51,234,0.06)]",
-    iconStyle: "bg-purple-500/20 text-purple-800 dark:text-purple-200 border border-purple-300/80 dark:border-purple-700",
-    badgeStyle: "bg-white/90 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-300/80 dark:border-purple-700",
-    chevronStyle: "text-purple-800 dark:text-purple-200 bg-white/70 dark:bg-purple-900/50",
-    indentLine: "border-l-4 border-l-purple-400 dark:border-l-purple-500 bg-purple-50/40 dark:bg-purple-950/20",
+    id: "DOMAIN_JANIN",
+    name: "JANIN",
+    title: "3. DOMAIN JANIN (Kondisi & Jumlah Janin)",
+    subtitle: "Evaluasi kehamilan tunggal vs ganda, taksiran berat janin (makrosomia) & volume ketuban",
     icon: Activity,
+    headerGradient: "bg-gradient-to-r from-purple-100 via-purple-100/90 to-violet-100/80 dark:from-purple-950/70 dark:via-purple-900/60 dark:to-violet-950/50 text-purple-950 dark:text-purple-100 border-b-2 border-purple-300 dark:border-purple-800",
+    cardBorder: "border-2 border-purple-300/90 dark:border-purple-800 shadow-[0_2px_12px_rgba(147,51,234,0.06)]",
+    iconStyle: "bg-purple-500/20 text-purple-800 dark:text-purple-200 border border-purple-300/80 dark:border-purple-700",
+    badgeStyle: "bg-white/90 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-700",
+    chevronStyle: "text-purple-800 dark:text-purple-200 bg-white/70 dark:bg-purple-900/50",
+    items: [
+      // RISIKO RENDAH
+      { id: "fet_low_singleton", label: "Kehamilan tunggal normal", riskTier: "LOW" },
+
+      // RISIKO SEDANG
+      { id: "fet_mod_macrosomia_poly", label: "Makrosomia atau Polihidramnion", riskTier: "MODERATE" },
+
+      // RISIKO TINGGI
+      { id: "fet_high_multiple", label: "Kehamilan ganda (gemeli / multipel)", riskTier: "HIGH" },
+    ],
   },
   {
-    id: "KOMBINASI_RISIKO",
-    label: "KOMBINASI RISIKO",
-    domain: "TAMBAHAN" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-amber-200 via-amber-200/90 to-orange-200/80 dark:from-amber-950/70 dark:via-amber-900/60 dark:to-orange-950/50 text-amber-950 dark:text-amber-100 border-b-2 border-amber-300/90 dark:border-amber-800",
-    cardBorder: "border-2 border-amber-300/90 dark:border-amber-800/80 shadow-[0_2px_12px_rgba(217,119,6,0.06)]",
-    iconStyle: "bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700",
-    badgeStyle: "bg-white/90 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700",
-    chevronStyle: "text-amber-800 dark:text-amber-200 bg-white/70 dark:bg-amber-900/50",
-    indentLine: "border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-amber-50/40 dark:bg-amber-950/20",
+    id: "DOMAIN_KOMBINASI",
+    name: "KOMBINASI RISIKO",
+    title: "4. DOMAIN KOMBINASI RISIKO",
+    subtitle: "Evaluasi penggabungan faktor risiko maternal, obstetri, janin & ambang eskalasi klinis",
     icon: ShieldAlert,
-  },
-  {
-    id: "PERSALINAN",
-    label: "PERSALINAN",
-    domain: "TONUS" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-emerald-200 via-emerald-200/90 to-teal-200/80 dark:from-emerald-950/70 dark:via-emerald-900/60 dark:to-teal-950/50 text-emerald-950 dark:text-emerald-100 border-b-2 border-emerald-300/90 dark:border-emerald-800",
-    cardBorder: "border-2 border-emerald-300/90 dark:border-emerald-900/80 shadow-[0_2px_12px_rgba(5,150,105,0.06)]",
-    iconStyle: "bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-300/80 dark:border-emerald-700",
-    badgeStyle: "bg-white/90 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 border border-emerald-300/80 dark:border-emerald-700",
-    chevronStyle: "text-emerald-800 dark:text-emerald-200 bg-white/70 dark:bg-emerald-900/50",
-    indentLine: "border-l-4 border-l-emerald-400 dark:border-l-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20",
-    icon: Clock,
-  },
-  {
-    id: "HEMATOLOGI",
-    label: "HEMATOLOGI",
-    domain: "TROMBIN" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-red-200 via-red-200/90 to-rose-200/80 dark:from-red-950/70 dark:via-red-900/60 dark:to-rose-950/50 text-red-950 dark:text-red-100 border-b-2 border-red-300/90 dark:border-red-800",
-    cardBorder: "border-2 border-red-300/90 dark:border-red-900/80 shadow-[0_2px_12px_rgba(220,38,38,0.06)]",
-    iconStyle: "bg-red-500/20 text-red-800 dark:text-red-200 border border-red-300/80 dark:border-red-700",
-    badgeStyle: "bg-white/90 dark:bg-red-900/60 text-red-900 dark:text-red-200 border border-red-300/80 dark:border-red-700",
-    chevronStyle: "text-red-800 dark:text-red-200 bg-white/70 dark:bg-red-900/50",
-    indentLine: "border-l-4 border-l-red-400 dark:border-l-red-500 bg-red-50/40 dark:bg-red-950/20",
-    icon: Droplets,
-  },
-  {
-    id: "LABORATORIUM",
-    label: "LABORATORIUM",
-    domain: "TROMBIN" as Domain4T,
-    headerGradient: "bg-gradient-to-r from-cyan-200 via-cyan-200/90 to-sky-200/80 dark:from-cyan-950/70 dark:via-cyan-900/60 dark:to-sky-950/50 text-cyan-950 dark:text-cyan-100 border-b-2 border-cyan-300/90 dark:border-cyan-800",
-    cardBorder: "border-2 border-cyan-300/90 dark:border-cyan-900/80 shadow-[0_2px_12px_rgba(8,145,178,0.06)]",
-    iconStyle: "bg-cyan-500/20 text-cyan-800 dark:text-cyan-200 border border-cyan-300/80 dark:border-cyan-700",
-    badgeStyle: "bg-white/90 dark:bg-cyan-900/60 text-cyan-900 dark:text-cyan-200 border border-cyan-300/80 dark:border-cyan-700",
-    chevronStyle: "text-cyan-800 dark:text-cyan-200 bg-white/70 dark:bg-cyan-900/50",
-    indentLine: "border-l-4 border-l-cyan-400 dark:border-l-cyan-500 bg-cyan-50/40 dark:bg-cyan-950/20",
-    icon: FileText,
+    headerGradient: "bg-gradient-to-r from-amber-100 via-amber-100/90 to-orange-100/80 dark:from-amber-950/70 dark:via-amber-900/60 dark:to-orange-950/50 text-amber-950 dark:text-amber-100 border-b-2 border-amber-300 dark:border-amber-800",
+    cardBorder: "border-2 border-amber-300/90 dark:border-amber-800 shadow-[0_2px_12px_rgba(217,119,6,0.06)]",
+    iconStyle: "bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700",
+    badgeStyle: "bg-white/90 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700",
+    chevronStyle: "text-amber-800 dark:text-amber-200 bg-white/70 dark:bg-amber-900/50",
+    items: [
+      // RISIKO SEDANG
+      { id: "comb_mod_threshold", label: "Terdapat >= 1 faktor risiko tinggi ATAU >= 2 faktor risiko sedang tanpa tanda pemberatan", riskTier: "MODERATE" },
+
+      // RISIKO TINGGI
+      { id: "comb_high_severe_combo", label: "Kombinasi komplikasi berat (misal: preeklamsia berat disertai gangguan lab/tanda pemberatan atau skor kumulatif risiko tinggi ganda)", riskTier: "HIGH" },
+    ],
   },
 ];
 
@@ -265,17 +305,41 @@ export function UnifiedClinicalScreeningView({
   }, [selectedAdmId, isPeScreeningCompleted, activeInstrument]);
 
   // 4. State Accordion Kategori & Filter Risiko (Section 1)
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    MATERNAL: true,
-    OBSTETRI: true,
-    HEMATOLOGI: true,
-    LABORATORIUM: true,
-    PERSALINAN: true,
-    JANIN: true,
-    KOMBINASI_RISIKO: true,
+  const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({
+    TIER_LOW: true,
+    TIER_MODERATE: true,
+    TIER_HIGH: true,
   });
 
-  const [riskFilter, setRiskFilter] = useState<"SEMUA" | "TINGGI" | "MEDIUM" | "RENDAH">("SEMUA");
+  // State Accordion 4 Domain Skrining Klinis SIGAP (Maternal, Obstetri, Janin, Kombinasi Risiko)
+  const [expandedDomains, setExpandedDomains] = useState<Record<string, boolean>>({
+    DOMAIN_MATERNAL: true,
+    DOMAIN_OBSTETRI: true,
+    DOMAIN_JANIN: true,
+    DOMAIN_KOMBINASI: true,
+  });
+
+  const toggleDomainExpand = (domainId: string) => {
+    setExpandedDomains((prev) => ({
+      ...prev,
+      [domainId]: !prev[domainId],
+    }));
+  };
+
+  const [riskFilter, setRiskFilter] = useState<"SEMUA" | "RENDAH" | "SEDANG" | "TINGGI">("SEMUA");
+
+  const handleSetRiskFilter = (filter: "SEMUA" | "RENDAH" | "SEDANG" | "TINGGI") => {
+    setRiskFilter(filter);
+    if (filter === "SEMUA") {
+      setExpandedTiers({ TIER_LOW: true, TIER_MODERATE: true, TIER_HIGH: true });
+    } else if (filter === "RENDAH") {
+      setExpandedTiers({ TIER_LOW: true, TIER_MODERATE: false, TIER_HIGH: false });
+    } else if (filter === "SEDANG") {
+      setExpandedTiers({ TIER_LOW: false, TIER_MODERATE: true, TIER_HIGH: false });
+    } else if (filter === "TINGGI") {
+      setExpandedTiers({ TIER_LOW: false, TIER_MODERATE: false, TIER_HIGH: true });
+    }
+  };
 
   // Masters
   const hppMasters = useMemo(() => {
@@ -288,7 +352,48 @@ export function UnifiedClinicalScreeningView({
 
   const currentMasters = activeInstrument === "HPP" ? hppMasters : peMasters;
 
+  // Pemisahan Faktor Risiko Klinis Sesuai Tabel 1 & Tabel 2 Dokumen Template SIGAP
+  const peModerateFactors = useMemo(() => {
+    return peMasters.filter((m) => m.risk_tier === "MODERATE");
+  }, [peMasters]);
+
+  const peHighFactors = useMemo(() => {
+    return peMasters.filter((m) => m.risk_tier === "HIGH" || m.risk_tier === "CRITICAL_IMMEDIATE");
+  }, [peMasters]);
+
+  const hppModerateFactors = useMemo(() => {
+    return hppMasters.filter((m) => m.risk_tier === "MODERATE");
+  }, [hppMasters]);
+
+  const hppHighFactors = useMemo(() => {
+    return hppMasters.filter((m) => m.risk_tier === "HIGH" || m.risk_tier === "CRITICAL_IMMEDIATE");
+  }, [hppMasters]);
+
   // 5. State Isian Skrining (Form Inputs)
+  // State Spesifik: Pengukuran Tekanan Darah (Dua Kali Pengukuran)
+  const [bp1Systolic, setBp1Systolic] = useState<string>("");
+  const [bp1Diastolic, setBp1Diastolic] = useState<string>("");
+  const [bp1HeartRate, setBp1HeartRate] = useState<string>("");
+  const [bp2Systolic, setBp2Systolic] = useState<string>("");
+  const [bp2Diastolic, setBp2Diastolic] = useState<string>("");
+  const [bp2HeartRate, setBp2HeartRate] = useState<string>("");
+
+  // State Spesifik: Protein Urin & 4 Gejala Pemberatan Utama
+  const [proteinUrine, setProteinUrine] = useState<string>("NEGATIF");
+  const [symptomHeadache, setSymptomHeadache] = useState<boolean>(false);
+  const [symptomVision, setSymptomVision] = useState<boolean>(false);
+  const [symptomEpigastric, setSymptomEpigastric] = useState<boolean>(false);
+  const [symptomDyspnea, setSymptomDyspnea] = useState<boolean>(false);
+
+  // State Spesifik HPP: Kadar Hb & Riwayat HPP
+  const [labHb, setLabHb] = useState<string>("");
+  const [historyPrevHpp, setHistoryPrevHpp] = useState<boolean>(false);
+
+  // State Spesifik Lab Organ
+  const [labPlatelets, setLabPlatelets] = useState<string>("");
+  const [labSgot, setLabSgot] = useState<string>("");
+  const [labCreatinine, setLabCreatinine] = useState<string>("");
+
   const [responses, setResponses] = useState<Record<string, ClinicalItemResponse>>({});
   const [clinicalNotes, setClinicalNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -326,6 +431,7 @@ export function UnifiedClinicalScreeningView({
   // Dialog Modals
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showDischargeModal, setShowDischargeModal] = useState(false);
+  const [showRescreenModal, setShowRescreenModal] = useState(false);
   const [targetUnitId, setTargetUnitId] = useState("");
   const [dischargeSummary, setDischargeSummary] = useState("");
 
@@ -347,6 +453,56 @@ export function UnifiedClinicalScreeningView({
 
     lastLoadedAdmIdRef.current = currentAdmission.admission_id;
     lastLoadedInstrumentRef.current = activeInstrument;
+
+    // Isi nilai eksisting dari DB
+    const bps = (db.bp_measurements || [])
+      .filter((b) => b.admission_id === currentAdmission.admission_id)
+      .sort((a, b) => a.sequence_number - b.sequence_number);
+    if (bps[0]) {
+      setBp1Systolic(String(bps[0].systolic));
+      setBp1Diastolic(String(bps[0].diastolic));
+      setBp1HeartRate(bps[0].heart_rate ? String(bps[0].heart_rate) : "");
+    } else {
+      setBp1Systolic("");
+      setBp1Diastolic("");
+      setBp1HeartRate("");
+    }
+    if (bps[1]) {
+      setBp2Systolic(String(bps[1].systolic));
+      setBp2Diastolic(String(bps[1].diastolic));
+      setBp2HeartRate(bps[1].heart_rate ? String(bps[1].heart_rate) : "");
+    } else {
+      setBp2Systolic("");
+      setBp2Diastolic("");
+      setBp2HeartRate("");
+    }
+
+    const symptoms = (db.pe_symptoms || []).filter(
+      (s) => s.pe_screening_id === currentAdmission.pe_screening?.pe_screening_id
+    );
+    setSymptomHeadache(symptoms.some((s) => s.symptom_code.includes("HEADACHE") && s.response === "YA"));
+    setSymptomVision(symptoms.some((s) => s.symptom_code.includes("VISION") && s.response === "YA"));
+    setSymptomEpigastric(symptoms.some((s) => s.symptom_code.includes("EPIGASTRIC") && s.response === "YA"));
+    setSymptomDyspnea(
+      symptoms.some((s) => (s.symptom_code.includes("DYSPNEA") || s.symptom_code.includes("EDEMA")) && s.response === "YA") ||
+      currentAdmission.pe_screening?.edema_paru_sesak_berat === "YA"
+    );
+
+    const labs = (db.lab_results || []).filter((l) => l.admission_id === currentAdmission.admission_id);
+    const protLab = labs.find((l) => l.test_code.includes("PROTEIN") || l.test_name.toLowerCase().includes("protein"));
+    setProteinUrine(protLab?.value_text || (protLab?.value_numeric ? `+${protLab.value_numeric}` : "NEGATIF"));
+
+    const hbLab = labs.find((l) => l.test_code.includes("HB") || l.test_name.toLowerCase().includes("hemoglobin"));
+    setLabHb(hbLab?.value_numeric ? String(hbLab.value_numeric) : hbLab?.value_text?.replace(/[^0-9.]/g, "") || "");
+
+    const pltLab = labs.find((l) => l.test_code.includes("PLATELET") || l.test_name.toLowerCase().includes("trombosit"));
+    setLabPlatelets(pltLab?.value_numeric ? String(pltLab.value_numeric) : "");
+
+    const sgotLab = labs.find((l) => l.test_code.includes("SGOT") || l.test_code.includes("AST") || l.test_name.toLowerCase().includes("sgot"));
+    setLabSgot(sgotLab?.value_numeric ? String(sgotLab.value_numeric) : "");
+
+    const creatLab = labs.find((l) => l.test_code.includes("CREATININE") || l.test_name.toLowerCase().includes("kreatinin"));
+    setLabCreatinine(creatLab?.value_numeric ? String(creatLab.value_numeric) : "");
 
     const pathway = activeInstrument;
     const existingDetails = db.screening_risk_details.filter(
@@ -398,239 +554,294 @@ export function UnifiedClinicalScreeningView({
     setErrorMessage(null);
   }, [currentAdmission?.admission_id, activeInstrument, db.screening_risk_details, hppMasters, peMasters]);
 
-  // Hitung Aspek Ditinjau & Belum Dipilih
-  const totalFactorsCount = currentMasters.length;
+  // Hitung Aspek Ditinjau & Belum Dipilih Berdasarkan 4 Domain Klinis
+  const allDomainItems = useMemo(() => {
+    return CLINICAL_SCREENING_DOMAINS.flatMap((d) => d.items);
+  }, []);
+
+  const totalFactorsCount = allDomainItems.length; // 32 Butir Kriteria Sesuai Template
   const answeredCount = useMemo(() => {
-    return Object.values(responses).filter((r) => r === "YA" || r === "TIDAK").length;
-  }, [responses]);
+    return allDomainItems.filter((item) => {
+      const resp = responses[item.id];
+      return resp === "YA" || resp === "TIDAK";
+    }).length;
+  }, [allDomainItems, responses]);
 
   const unselectedCount = Math.max(0, totalFactorsCount - answeredCount);
 
-  // Kategori Faktor Pembagian (Mapping ke 7 Accordion)
-  const categorizedFactors = useMemo(() => {
-    const groups: Record<string, RiskFactorMaster[]> = {
-      MATERNAL: [],
-      OBSTETRI: [],
-      HEMATOLOGI: [],
-      LABORATORIUM: [],
-      PERSALINAN: [],
-      JANIN: [],
-      KOMBINASI_RISIKO: [],
-    };
+  // Live Calculated Risk Category (Persis Kriteria Template Docx & Protokol)
+  const calculatedRisk: RiskCategory = useMemo(() => {
+    // 1. Evaluasi Berdasarkan Respon 4 Domain Klinis (32 Butir Kriteria)
+    let domainHasHigh = false;
+    let domainModCount = 0;
 
-    currentMasters.forEach((m) => {
-      const codeUpper = m.code.toUpperCase();
-      const labelUpper = m.label.toUpperCase();
-
-      if (codeUpper.includes("LAB") || codeUpper.includes("TROMBOSIT") || codeUpper.includes("PROTEIN") || labelUpper.includes("LABORATORIUM")) {
-        groups.LABORATORIUM.push(m);
-      } else if (codeUpper.includes("TROMBIN") || codeUpper.includes("HEMO") || codeUpper.includes("ANEMIA")) {
-        groups.HEMATOLOGI.push(m);
-      } else if (codeUpper.includes("PERSALINAN") || codeUpper.includes("INDUKSI") || codeUpper.includes("PARTUS")) {
-        groups.PERSALINAN.push(m);
-      } else if (codeUpper.includes("JANIN") || codeUpper.includes("GEMELI") || codeUpper.includes("MAKROSOMIA") || codeUpper.includes("IUGR") || codeUpper.includes("MULTIPLE") || labelUpper.includes("JANIN") || labelUpper.includes("GANDA")) {
-        groups.JANIN.push(m);
-      } else if (codeUpper.includes("KOMBINASI") || codeUpper.includes("TAMBAHAN") || codeUpper.includes("OBESIT") || codeUpper.includes("USIA") || codeUpper.includes("AGE") || codeUpper.includes("INTERVAL") || labelUpper.includes("OBESITAS") || labelUpper.includes("USIA")) {
-        groups.KOMBINASI_RISIKO.push(m);
-      } else if (codeUpper.includes("TRAUMA") || codeUpper.includes("SC") || codeUpper.includes("PARUT") || codeUpper.includes("OBSTETRI") || codeUpper.includes("PRIMI") || codeUpper.includes("PREV_PE") || codeUpper.includes("HIST_PREV") || labelUpper.includes("PREEKLAMSIA") || labelUpper.includes("PRIMIGRAVIDA")) {
-        groups.OBSTETRI.push(m);
-      } else {
-        groups.MATERNAL.push(m);
-      }
+    CLINICAL_SCREENING_DOMAINS.forEach((domain) => {
+      domain.items.forEach((item) => {
+        const val = responses[item.id];
+        if (val === "YA") {
+          if (item.riskTier === "HIGH") domainHasHigh = true;
+          else if (item.riskTier === "MODERATE") domainModCount++;
+        }
+      });
     });
 
-    return groups;
-  }, [currentMasters]);
-
-  // Live Calculated Risk Category (Sesuai Kriteria Ringkas Tabel 3)
-  const calculatedRisk: RiskCategory = useMemo(() => {
-    // Kunci Otomatis: Ibu dengan PE Berat otomatis diklasifikasikan sebagai Risiko Tinggi HPP (Tabel 2 & 3)
-    if (activeInstrument === "HPP" && currentAdmission?.latest_pe_result?.category === "HIGH") {
+    if (domainHasHigh) {
       return "HIGH";
     }
+    if (domainModCount >= 1) {
+      return "MODERATE";
+    }
 
-    let hasHigh = false;
-    let moderateCount = 0;
+    if (activeInstrument === "PE") {
+      const sbp1 = Number(bp1Systolic) || 0;
+      const dbp1 = Number(bp1Diastolic) || 0;
+      const sbp2 = Number(bp2Systolic) || 0;
+      const dbp2 = Number(bp2Diastolic) || 0;
+      const maxSbp = Math.max(sbp1, sbp2);
+      const maxDbp = Math.max(dbp1, dbp2);
 
-    Object.entries(responses).forEach(([rfId, resp]) => {
-      if (resp === "YA") {
-        const factor = currentMasters.find((m) => m.risk_factor_id === rfId);
-        if (factor) {
-          if (factor.risk_tier === "CRITICAL_IMMEDIATE" || factor.risk_tier === "HIGH") {
-            hasHigh = true;
-          } else if (factor.risk_tier === "MODERATE") {
-            moderateCount++;
-          }
-        }
+      // 1. Tanda Bahaya & Krisis Berat (HIGH / Risiko Berat) Sesuai Tabel 1 Template:
+      // - Tekanan darah >= 160/110 mmHg (menetap >= 15 menit)
+      // - Terdapat tanda pemberatan (sakit kepala hebat, gangguan penglihatan, nyeri ulu hati/epigastrium, sesak napas/edema paru)
+      // - Kejang (eklamsia)
+      // - Hasil lab abnormal (trombosit < 100.000/uL, transaminase >= 2x normal, kreatinin > 1.1 mg/dL)
+      const isBpCrisis = maxSbp >= 160 || maxDbp >= 110;
+      const hasSevereSymptoms = symptomHeadache || symptomVision || symptomEpigastric || symptomDyspnea;
+
+      const plt = Number(labPlatelets) || 0;
+      const sgot = Number(labSgot) || 0;
+      const creat = Number(labCreatinine) || 0;
+      const isLabSevere = (plt > 0 && plt < 100000) || sgot >= 70 || creat > 1.1;
+
+      if (isBpCrisis || (maxSbp >= 140 && hasSevereSymptoms) || isLabSevere) {
+        return "HIGH";
       }
-    });
 
-    if (hasHigh) return "HIGH";
-    if (moderateCount >= 1) return "MODERATE";
-    return "LOW";
-  }, [responses, currentMasters, activeInstrument, currentAdmission]);
+      // 2. Kriteria Risiko Sedang (MODERATE / Risiko Sedang) Sesuai Tabel 1 Template:
+      // - Tekanan darah 140–159 / 90–109 mmHg (pada 1 kali pengukuran)
+      // - Protein urin positif (dipstik >= +1 atau uPCR >= 0.3)
+      // - Terdapat >= 1 faktor risiko tinggi ATAU >= 2 faktor risiko sedang tanpa tanda pemberatan
+      const isBpHypertension = maxSbp >= 140 || maxDbp >= 90;
+      const hasProteinuria = ["POSITIF_1", "POSITIF_2", "POSITIF_3", "POSITIF_4", "+1", "+2", "+3", "+4", "UPCR_HIGH"].includes(proteinUrine);
 
-  // Deteksi Otomatis: Apakah pasien mengalami Preeklamsia Berat / Hipertensi (Tabel 2 Poin 12)
+      let highCount = 0;
+      let modCount = 0;
+      Object.entries(responses).forEach(([rfId, val]) => {
+        if (val === "YA") {
+          const m = peMasters.find((item) => item.risk_factor_id === rfId);
+          if (m?.risk_tier === "HIGH" || m?.risk_tier === "CRITICAL_IMMEDIATE") highCount++;
+          else if (m?.risk_tier === "MODERATE") modCount++;
+        }
+      });
+
+      if (isBpHypertension || hasProteinuria || highCount >= 1 || modCount >= 2) {
+        return "MODERATE";
+      }
+
+      // 3. Kriteria Risiko Rendah (LOW / Normal) Sesuai Tabel 1 Template:
+      // - TD < 140/90 mmHg, tanpa keluhan, tanpa riwayat risiko tinggi, tanpa proteinuria
+      return "LOW";
+    } else {
+      // INSTRUMEN HPP Sesuai Tabel 2 Template SIGAP
+      // 1. Risiko Tinggi (HIGH / Merah):
+      // - Riwayat HPP sebelumnya, plasenta previa/akreta, perdarahan aktif, gemeli, anemia berat (Hb < 7), trombositopenia, PE Berat
+      const hb = parseFloat(labHb) || 0;
+      const isSevereAnemia = hb > 0 && hb < 7.0;
+      const isPeSevere =
+        currentAdmission?.latest_pe_result?.category === "HIGH" &&
+        (currentAdmission?.pe_screening?.edema_paru_sesak_berat === "YA" ||
+         currentAdmission?.pe_screening?.kejang_eklamsia === "YA" ||
+         Number(bp1Systolic) >= 160 ||
+         Number(bp1Diastolic) >= 110);
+
+      let hasHighHppFactor = false;
+      let modHppCount = 0;
+      Object.entries(responses).forEach(([rfId, val]) => {
+        if (val === "YA") {
+          const m = hppMasters.find((item) => item.risk_factor_id === rfId);
+          if (m?.risk_tier === "CRITICAL_IMMEDIATE" || m?.risk_tier === "HIGH") hasHighHppFactor = true;
+          else if (m?.risk_tier === "MODERATE") modHppCount++;
+        }
+      });
+
+      if (historyPrevHpp || isSevereAnemia || isPeSevere || hasHighHppFactor) {
+        return "HIGH";
+      }
+
+      // 2. Risiko Sedang (MODERATE / Kuning):
+      // - Anemia ringan-sedang (Hb 7–10,9 g/dL), obesitas, makrosomia, polihidramnion, grandemultipara, induksi, riwayat SC 1x, PE ringan
+      const isModerateAnemia = hb >= 7.0 && hb < 11.0;
+      if (isModerateAnemia || modHppCount >= 1) {
+        return "MODERATE";
+      }
+
+      // 3. Risiko Rendah (LOW / Hijau):
+      // - Tidak ada faktor risiko HPP saat admisi, Hb >= 11 g/dL, kehamilan tunggal, TD normal
+      return "LOW";
+    }
+  }, [
+    responses,
+    peMasters,
+    hppMasters,
+    activeInstrument,
+    currentAdmission,
+    bp1Systolic,
+    bp1Diastolic,
+    bp2Systolic,
+    bp2Diastolic,
+    proteinUrine,
+    symptomHeadache,
+    symptomVision,
+    symptomEpigastric,
+    symptomDyspnea,
+    labPlatelets,
+    labSgot,
+    labCreatinine,
+    labHb,
+    historyPrevHpp,
+  ]);
+
+  // Deteksi Otomatis: Apakah pasien mengalami Preeklamsia Berat Aktif / Hipertensi Krisis (Tabel 2 Poin 12)
   const isPatientPeHigh = useMemo(() => {
+    if (activeInstrument === "PE") {
+      return calculatedRisk === "HIGH";
+    }
+    const sbp = Number(bp1Systolic) || 0;
+    const dbp = Number(bp1Diastolic) || 0;
     return (
-      currentAdmission?.latest_pe_result?.category === "HIGH" ||
-      (activeInstrument === "PE" && calculatedRisk === "HIGH") ||
-      currentAdmission?.obstetric_history.riwayat_pe_sebelumnya === "YA" ||
-      currentAdmission?.obstetric_history.hipertensi_kronis === "YA"
+      sbp >= 160 ||
+      dbp >= 110 ||
+      (currentAdmission?.latest_pe_result?.category === "HIGH" &&
+        (symptomHeadache || symptomVision || symptomEpigastric || symptomDyspnea))
     );
-  }, [currentAdmission, activeInstrument, calculatedRisk]);
+  }, [activeInstrument, calculatedRisk, bp1Systolic, bp1Diastolic, currentAdmission, symptomHeadache, symptomVision, symptomEpigastric, symptomDyspnea]);
 
   const activeFactorsCount = useMemo(() => {
     return Object.values(responses).filter((r) => r === "YA").length;
   }, [responses]);
 
   // Bundle Tindak Lanjut Klinis Persis Sesuai Tabel 3 Dokumen SIGAP
+  // Bundle Tindak Lanjut Klinis Persis Sesuai Template Dokumen SIGAP (Tabel 1 & 2)
   const bundleItems = useMemo(() => {
     if (activeInstrument === "HPP") {
-      if (calculatedRisk === "HIGH") {
+      // 1. KATEGORI RISIKO RENDAH (HIJAU)
+      if (calculatedRisk === "LOW") {
         return [
           {
-            id: "hpp-h1",
-            title: "Konsultasi Dini Sp.OG, Anestesi, & Bank Darah (Format SBAR)",
-            desc: "Pemberitahuan dini tim multidisiplin PONEK dan konfirmasi kesiapan darah cito.",
+            id: "hpp-l1",
+            title: "Penatalaksanaan Aktif Kala III Rutin (Oksitosin 10 IU IM/IV)",
+            desc: "Penatalaksanaan aktif kala III rutin pada semua persalinan dengan Oksitosin 10 IU IM/IV (atau Karbetosin stabil panas 100 ug IM/IV jika rantai dingin tidak terjamin) segera setelah bayi lahir.",
           },
           {
-            id: "hpp-h2",
-            title: "Pasang Dua Jalur Akses IV Kanul Besar (16G–18G) & Crossmatch",
-            desc: "Siapkan jalur kristaloid hangat & transfusi darah (minimal 2 labu PRC siap pakai).",
-          },
-          {
-            id: "hpp-h3",
-            title: "Siapkan Paket Tatalaksana E-MOTIVE Lengkap di Kamar Bersalin",
-            desc: "Kesiapan respons simultan < 15 menit: (E) Drape kalibrasi, (M) Masase, (O) Oksitosin, (T) Asam Traneksamat 1g IV, (IV) Cairan & periksa jalan lahir, (E) Eskalasi.",
-          },
-          {
-            id: "hpp-h4",
-            title: "Siapkan Alat Tamponade Balon Uterus / Kondom Kateter",
-            desc: "Intervensi hemostasis mekanis darurat bila perdarahan berlanjut sebelum intervensi bedah.",
-          },
-          {
-            id: "hpp-h5",
-            title: "Waspada Kontraindikasi Uterotonika",
-            desc: isPatientPeHigh
-              ? "KONTRAINDIKASI MUTLAK METILERGOMETRIN (pasien hipertensi/preeklamsia). Gunakan Oksitosin / Misoprostol / Karbetosin."
-              : "Siapkan Oksitosin 10-20 IU drip, Karbetosin 100 mcg IM/IV, atau Misoprostol 400-600 mcg.",
-          },
-          {
-            id: "hpp-h6",
-            title: "Pertimbangkan Rujukan Terencana ke Fasilitas PONEK Komprehensif",
-            desc: "Siapkan stabilisasi dan rujukan ambulans bila sarana atau komponen darah tidak memadai.",
+            id: "hpp-l2",
+            title: "Pengukuran Darah Objektif & Pantau Shock Index",
+            desc: "Gunakan pengukuran darah objektif (kain kalibrasi/calibrated drape atau penimbangan kasa) dan pantau Shock Index (HR / TDS) pascapersalinan.",
           },
         ];
       }
+      // 2. KATEGORI RISIKO SEDANG (KUNING)
       if (calculatedRisk === "MODERATE") {
         return [
           {
             id: "hpp-m1",
-            title: "Pasang Akses IV Berdiameter Besar (16G–18G)",
-            desc: "Akses intravena paten untuk kesiagaan hidrasi dan dekompensasi mendadak.",
+            title: "Pasang Akses IV Berdiameter Besar (16G–18G) & Cek Lab",
+            desc: "Pasang akses IV berdiameter besar (16G–18G), periksa darah lengkap (Hb/trombosit) dan golongan darah.",
           },
           {
             id: "hpp-m2",
-            title: "Pemeriksaan Darah Lengkap (Hb / Trombosit) & Golongan Darah",
-            desc: "Identifikasi status anemia admisi (Hb < 11 g/dL) dan uji kecocokan golongan darah.",
+            title: "Siapkan Uterotonika & Asam Traneksamat 1 g IV (Bedside Kit)",
+            desc: "Siapkan uterotonika dan Asam Traneksamat 1 g IV di samping tempat tidur (bedside kit) sebagai kesiagaan.",
           },
           {
             id: "hpp-m3",
-            title: "Siapkan Uterotonika & Asam Traneksamat 1 g IV (Bedside Kit)",
-            desc: "Letakkan uterotonika dan Asam Traneksamat di samping tempat tidur sebagai kesiagaan darurat.",
-          },
-          {
-            id: "hpp-m4",
             title: "Wajib Ukur Kehilangan Darah Objektif dengan Kain Kalibrasi",
-            desc: "Gunakan underbuttock graduated drape / penimbangan kasa sejak kala III dan informasikan tim jaga.",
+            desc: "Wajib ukur kehilangan darah secara objektif dengan kain kalibrasi sejak kala III dan informasikan tim jaga.",
           },
         ];
       }
-      // LOW (Hijau)
+      // 3. KATEGORI RISIKO TINGGI (MERAH)
       return [
         {
-          id: "hpp-l1",
-          title: "Penatalaksanaan Aktif Kala III (MAK III) Rutin",
-          desc: "Pemberian Oksitosin 10 IU IM/IV (atau Karbetosin stabil panas 100 ug) segera dalam 1 menit setelah bayi lahir.",
+          id: "hpp-h1",
+          title: "Konsultasi Dini Sp.OG, Anestesi, & Bank Darah (Format SBAR)",
+          desc: "Konsultasi dini dokter spesialis obstetri, anestesi, dan bank darah (format SBAR).",
         },
         {
-          id: "hpp-l2",
-          title: "Pengukuran Kehilangan Darah Objektif & Pantau Shock Index",
-          desc: "Gunakan kain kalibrasi / penimbangan kasa dan pantau Shock Index (HR/TDS) pascapersalinan. Tinggalkan estimasi visual.",
+          id: "hpp-h2",
+          title: "Pasang Dua Jalur Akses IV Besar (16G–18G) & Crossmatch",
+          desc: "Pasang dua jalur akses IV besar (16G–18G), uji silang (crossmatch), dan siapkan komponen darah.",
+        },
+        {
+          id: "hpp-h3",
+          title: "Siapkan Paket Tatalaksana E-MOTIVE Lengkap & Tamponade Balon",
+          desc: "Siapkan Paket Tatalaksana E-MOTIVE lengkap beserta alat tamponade balon uterus di kamar bersalin agar dapat dijalankan serentak dalam < 15 menit jika perdarahan >= 500 mL atau muncul tanda syok.",
+        },
+        {
+          id: "hpp-h4",
+          title: "Waspada Kontraindikasi Uterotonika",
+          desc: isPatientPeHigh
+            ? "KONTRAINDIKASI MUTLAK METILERGOMETRIN (pasien hipertensi/preeklamsia). Gunakan Oksitosin / Misoprostol / Karbetosin."
+            : "Siapkan Oksitosin 10-20 IU drip, Karbetosin 100 mcg IM/IV, atau Misoprostol 400-600 mcg.",
+        },
+        {
+          id: "hpp-h5",
+          title: "Pertimbangkan Rujukan Terencana ke Fasilitas PONEK Komprehensif",
+          desc: "Pertimbangkan rujukan terencana ke fasilitas PONEK komprehensif bila sarana atau komponen darah tidak memadai.",
         },
       ];
     } else {
-      // Instrument PREEKLAMSIA (PE)
-      if (calculatedRisk === "HIGH") {
+      // INSTRUMEN PREEKLAMSIA (PE)
+      // 1. KATEGORI RISIKO RENDAH
+      if (calculatedRisk === "LOW") {
         return [
           {
-            id: "pe-h1",
-            title: "Aktivasi Respons Cepat & Timer 30–60 Menit: Lapor Sp.OG (SBAR)",
-            desc: "Segera laporkan kondisi ibu ke DPJP Sp.OG menggunakan kerangka komunikasi SBAR terstandar.",
+            id: "pe-l1",
+            title: "Pemantauan Tanda Vital & Kemajuan Persalinan Rutin",
+            desc: "Pemantauan tanda vital dan kemajuan persalinan rutin sesuai protokol standar.",
           },
           {
-            id: "pe-h2",
-            title: "Pemberian Magnesium Sulfat (MgSO4 40%) Lini Pertama Anti-Kejang",
-            desc: "Loading dose: 4 gram MgSO4 40% IV pelan dalam 5-10 menit, lanjut rumatan 1 gram/jam. Siapkan Kalsium Glukonat 10% (antidotum).",
-          },
-          {
-            id: "pe-h3",
-            title: "Antihipertensi Kerja Cepat dalam 30–60 Menit",
-            desc: "Nifedipin 10 mg oral (evaluasi 15-30 mnt), Labetalol IV, atau Hidralazin IV. Target TD < 140/90 mmHg (diastolik aman >= 80 mmHg).",
-          },
-          {
-            id: "pe-h4",
-            title: "Pasang Akses IV Pembatasan Cairan Ketat & Kateter Urin Menetap",
-            desc: "Batasi cairan untuk cegah edema paru akut. Pantau syarat MgSO4: urin >= 30 mL/jam, RR >= 16x/mnt, refleks patela (+).",
-          },
-          {
-            id: "pe-h5",
-            title: "Kunci Otomatis HPP Risiko Tinggi & Kontraindikasi Metilergometrin",
-            desc: "KONTRAINDIKASI MUTLAK METILERGOMETRIN (ergometrin) karena memicu krisis hipertensi dan stroke hemoragik.",
-          },
-          {
-            id: "pe-h6",
-            title: "Evaluasi Laboratorium Serial & Rencana Rujukan / Terminasi",
-            desc: "Cek serial trombosit, fungsi hati SGOT/SGPT, kreatinin, dan siapkan rujukan bila fasilitas tidak memadai.",
+            id: "pe-l2",
+            title: "Skrining Ulang Berkala Bila Muncul Keluhan Baru",
+            desc: "Lakukan skrining ulang segera apabila muncul keluhan baru atau peningkatan tekanan darah selama perawatan.",
           },
         ];
       }
+      // 2. KATEGORI RISIKO SEDANG
       if (calculatedRisk === "MODERATE") {
         return [
           {
             id: "pe-m1",
-            title: "Istirahatkan Ibu & Ulangi Pengukuran TD Terstandar (>= 15 Menit)",
-            desc: "Posisi duduk bersandar atau setengah duduk, manset pas, lengan setinggi jantung (atau evaluasi dalam 4 jam).",
+            title: "Istirahatkan Ibu & Evaluasi Pengukuran TD Ulang (>= 15 Menit)",
+            desc: "Istirahatkan ibu dan ulangi pengukuran tekanan darah terstandar setelah >= 15 menit (atau evaluasi dalam 4 jam untuk konfirmasi diagnosis).",
           },
           {
             id: "pe-m2",
-            title: "Periksa Protein Urin (Dipstik / uPCR) & Laboratorium Dasar",
-            desc: "Pemeriksaan dipstik urin (>= +1) atau uPCR >= 0.3 mg/mg, darah lengkap (trombosit), fungsi hati, dan kreatinin.",
+            title: "Pemeriksaan Protein Urin & Panel Laboratorium Dasar",
+            desc: "Periksa protein urin serta panel laboratorium dasar (darah lengkap/trombosit, fungsi hati, kreatinin).",
           },
           {
             id: "pe-m3",
-            title: "Lapor Bidan Penanggung Jawab / Dokter Jaga & Pantau Berkala",
-            desc: "Tingkatkan frekuensi observasi tanda vital dan edukasi tanda bahaya (nyeri kepala hebat, pandangan kabur, nyeri ulu hati).",
-          },
-          {
-            id: "pe-m4",
-            title: "Aktifkan Peringatan Dini Risiko HPP (Minimal Kategori Sedang)",
-            desc: "Preeklamsia meningkatkan risiko atonia uteri dan komplikasi perdarahan pascapersalinan.",
+            title: "Lapor Bidan / Dokter Jaga & Aktifkan Peringatan Dini HPP",
+            desc: "Lapor bidan/dokter jaga, tingkatkan frekuensi pemantauan, dan aktifkan peringatan dini risiko HPP.",
           },
         ];
       }
-      // LOW
+      // 3. KATEGORI RISIKO BERAT (TINGGI)
       return [
         {
-          id: "pe-l1",
-          title: "Pemantauan Tanda Vital & Kemajuan Persalinan Rutin",
-          desc: "Observasi tanda vital standar, denyut jantung janin, dan kemajuan partus sesuai protokol pelayanan kamar bersalin.",
+          id: "pe-h1",
+          title: "Aktivasi Respons Cepat & Timer 30–60 Menit: Lapor Sp.OG (SBAR)",
+          desc: "Lapor dokter spesialis (format SBAR), mulai pemberian MgSO4 dan antihipertensi kerja cepat (target TD < 140/90 mmHg, diastolik >= 80 mmHg).",
         },
         {
-          id: "pe-l2",
-          title: "Skrining Ulang Segera Bila Muncul Keluhan Baru / Kenaikan TD",
-          desc: "Lakukan pengukuran ulang bila tensi meningkat >= 140/90 mmHg atau muncul gejala nyeri kepala / pandangan kabur.",
+          id: "pe-h2",
+          title: "Pasang Akses IV Restriksi Cairan & Pantau Toksisitas MgSO4",
+          desc: "Pasang akses IV dengan pembatasan cairan ketat (cegah edema paru) dan pantau toksisitas MgSO4 (refleks patela, RR >= 16x/menit, urin >= 30 mL/jam).",
+        },
+        {
+          id: "pe-h3",
+          title: "Kunci Otomatis HPP Risiko Tinggi: Kontraindikasi Metilergometrin",
+          desc: "Munculkan alert merah kontraindikasi mutlak Metilergometrin (ergometrin dilarang keras karena memicu lonjakan tensi fatal dan stroke).",
         },
       ];
     }
@@ -644,6 +855,59 @@ export function UnifiedClinicalScreeningView({
       ...prev,
       [rfId]: value,
     }));
+  };
+
+  // Handler: Tetapkan Jawaban 4 Domain Klinis SIGAP (Maternal, Obstetri, Janin, Kombinasi Risiko)
+  const handleToggleDomainItem = (itemId: string, value: ClinicalItemResponse) => {
+    setResponses((prev) => ({
+      ...prev,
+      [itemId]: value,
+    }));
+
+    // Sinkronisasi otomatis ke parameter vital & lab CDSS bila pengguna mengonfirmasi respon "YA"
+    if (itemId === "mat_low_normal" && value === "YA") {
+      if (!bp1Systolic || Number(bp1Systolic) >= 140) setBp1Systolic("120");
+      if (!bp1Diastolic || Number(bp1Diastolic) >= 90) setBp1Diastolic("80");
+      setLabHb("12.0");
+      setProteinUrine("NEGATIF");
+      setSymptomHeadache(false);
+      setSymptomVision(false);
+      setSymptomEpigastric(false);
+      setSymptomDyspnea(false);
+    } else if (itemId === "mat_mod_bp" && value === "YA") {
+      setBp1Systolic("145");
+      setBp1Diastolic("95");
+    } else if (itemId === "mat_high_bp" && value === "YA") {
+      setBp1Systolic("165");
+      setBp1Diastolic("110");
+    }
+
+    if (itemId === "mat_low_no_symptoms_risk" && value === "YA") {
+      setSymptomHeadache(false);
+      setSymptomVision(false);
+      setSymptomEpigastric(false);
+      setSymptomDyspnea(false);
+      setProteinUrine("NEGATIF");
+    } else if (itemId === "mat_high_severe_symptoms" && value === "YA") {
+      setSymptomHeadache(true);
+      setSymptomVision(true);
+      setSymptomEpigastric(true);
+      setSymptomDyspnea(true);
+    }
+
+    if (itemId === "mat_mod_proteinuria" && value === "YA") {
+      setProteinUrine("POSITIF_1");
+    }
+
+    if (itemId === "mat_mod_anemia" && value === "YA") {
+      setLabHb("9.5");
+    } else if (itemId === "mat_high_severe_anemia" && value === "YA") {
+      setLabHb("6.5");
+    }
+
+    if (itemId === "mat_high_prev_hpp_bleeding") {
+      setHistoryPrevHpp(value === "YA");
+    }
   };
 
   // Handler: Simpan Rekam Medis (Evaluasi CDSS Skrining)
@@ -667,6 +931,37 @@ export function UnifiedClinicalScreeningView({
           };
         });
 
+        const hppLabsPayload: Array<{
+          test_code: LabTestCode;
+          test_name: string;
+          result_status: LabAvailabilityStatus;
+          value_numeric?: number;
+          value_text?: string;
+          unit: string;
+          reference_range: string;
+        }> = [];
+        if (labHb) {
+          hppLabsPayload.push({
+            test_code: "LAB_HB_HEMOGLOBIN" as LabTestCode,
+            test_name: "Kadar Hemoglobin (Hb)",
+            result_status: "TERSEDIA" as LabAvailabilityStatus,
+            value_numeric: parseFloat(labHb),
+            value_text: `${labHb} g/dL`,
+            unit: "g/dL",
+            reference_range: ">= 11.0 g/dL",
+          });
+        }
+
+        const hppRiskDetails = formattedRiskDetails.map((rd) => {
+          if (rd.risk_factor_code.includes("PREV_HPP") && historyPrevHpp) {
+            return { ...rd, response: "YA" as ClinicalItemResponse };
+          }
+          if (rd.risk_factor_code.includes("MATERNAL_ANEMIA") && labHb && parseFloat(labHb) < 11.0) {
+            return { ...rd, response: "YA" as ClinicalItemResponse };
+          }
+          return rd;
+        });
+
         await apiRequest("/screening/hpp", {
           method: "POST",
           userId: currentUserId,
@@ -675,9 +970,9 @@ export function UnifiedClinicalScreeningView({
             perdarahan_aktif_saat_admisi: responses["HPP_ACTIVE_BLEED"] || "TIDAK",
             syok_hemodinamik_instabil: "TIDAK",
             rencana_metode_persalinan: "PERVAGINAM",
-            clinical_notes: clinicalNotes || "Skrining HPP dari panel klinis terpadu.",
-            risk_details: formattedRiskDetails,
-            labs: [],
+            clinical_notes: clinicalNotes || "Skrining HPP berdasarkan 4T, Hb Anemia & Riwayat HPP.",
+            risk_details: hppRiskDetails,
+            labs: hppLabsPayload,
             duration_seconds: 60,
             is_preemptive: false,
           },
@@ -695,6 +990,100 @@ export function UnifiedClinicalScreeningView({
           };
         });
 
+        const bpPayload = [];
+        if (bp1Systolic && bp1Diastolic) {
+          bpPayload.push({
+            systolic: Number(bp1Systolic),
+            diastolic: Number(bp1Diastolic),
+            heart_rate: bp1HeartRate ? Number(bp1HeartRate) : undefined,
+            note: "Pengukuran TD ke-1 (Awal Admisi)",
+          });
+        }
+        if (bp2Systolic && bp2Diastolic) {
+          bpPayload.push({
+            systolic: Number(bp2Systolic),
+            diastolic: Number(bp2Diastolic),
+            heart_rate: bp2HeartRate ? Number(bp2HeartRate) : undefined,
+            note: "Pengukuran TD ke-2 (Konfirmasi / Interval >= 15 Menit)",
+          });
+        }
+
+        const symptomsPayload = [
+          {
+            symptom_code: "PE_SYM_HEADACHE",
+            symptom_label: "Sakit Kepala Hebat",
+            is_severe_feature: true,
+            response: (symptomHeadache ? "YA" : "TIDAK") as ClinicalItemResponse,
+          },
+          {
+            symptom_code: "PE_SYM_VISUAL",
+            symptom_label: "Gangguan Penglihatan (Kabur/Skotoma)",
+            is_severe_feature: true,
+            response: (symptomVision ? "YA" : "TIDAK") as ClinicalItemResponse,
+          },
+          {
+            symptom_code: "PE_SYM_EPIGASTRIC",
+            symptom_label: "Nyeri Ulu Hati / Epigastrium",
+            is_severe_feature: true,
+            response: (symptomEpigastric ? "YA" : "TIDAK") as ClinicalItemResponse,
+          },
+          {
+            symptom_code: "PE_SYM_DYSPNEA",
+            symptom_label: "Sesak Napas / Edema Paru",
+            is_severe_feature: true,
+            response: (symptomDyspnea ? "YA" : "TIDAK") as ClinicalItemResponse,
+          },
+        ];
+
+        const labsPayload: Array<{
+          test_code: LabTestCode;
+          test_name: string;
+          result_status: LabAvailabilityStatus;
+          value_numeric?: number;
+          value_text?: string;
+          unit: string;
+          reference_range: string;
+        }> = [
+          {
+            test_code: "LAB_PROTEIN_DIPSTICK" as LabTestCode,
+            test_name: "Protein Urin",
+            result_status: "TERSEDIA" as LabAvailabilityStatus,
+            value_text: proteinUrine,
+            unit: "dipstik",
+            reference_range: "Negatif",
+          },
+        ];
+        if (labPlatelets) {
+          labsPayload.push({
+            test_code: "LAB_PLATELETS" as LabTestCode,
+            test_name: "Trombosit",
+            result_status: "TERSEDIA" as LabAvailabilityStatus,
+            value_numeric: Number(labPlatelets),
+            unit: "/uL",
+            reference_range: "150.000 - 450.000",
+          });
+        }
+        if (labSgot) {
+          labsPayload.push({
+            test_code: "LAB_SGOT_AST" as LabTestCode,
+            test_name: "SGOT / AST",
+            result_status: "TERSEDIA" as LabAvailabilityStatus,
+            value_numeric: Number(labSgot),
+            unit: "U/L",
+            reference_range: "< 35 U/L",
+          });
+        }
+        if (labCreatinine) {
+          labsPayload.push({
+            test_code: "LAB_SERUM_CREATININE" as LabTestCode,
+            test_name: "Serum Kreatinin",
+            result_status: "TERSEDIA" as LabAvailabilityStatus,
+            value_numeric: Number(labCreatinine),
+            unit: "mg/dL",
+            reference_range: "0.5 - 1.1 mg/dL",
+          });
+        }
+
         await apiRequest("/screening/pe", {
           method: "POST",
           userId: currentUserId,
@@ -703,12 +1092,13 @@ export function UnifiedClinicalScreeningView({
             admission_id: currentAdmission.admission_id,
             kejang_eklamsia: "TIDAK",
             kesadaran_menurun_gcs_rendah: "TIDAK",
-            edema_paru_sesak_berat: "TIDAK",
+            edema_paru_sesak_berat: symptomDyspnea ? "YA" : "TIDAK",
             oliguria_produksi_urin_rendah: "TIDAK",
-            clinical_notes: clinicalNotes || "Skrining PE dari panel klinis terpadu.",
-            symptoms: [],
+            clinical_notes: clinicalNotes || "Skrining PE berdasarkan pengukuran tensi 2x, protein urin, gejala & lab.",
+            bp_measurements: bpPayload,
+            symptoms: symptomsPayload,
+            labs: labsPayload,
             risk_details: formattedRiskDetails,
-            labs: [],
             duration_seconds: 60,
             is_preemptive: false,
           },
@@ -751,6 +1141,37 @@ export function UnifiedClinicalScreeningView({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handler: Skrining Ulang (Pengkajian Observasi / Kunjungan Terkini)
+  const handleConfirmRescreen = () => {
+    // Bersihkan respon 4 domain dan tanda vital agar siap diisi baru
+    setResponses({});
+    setBp1Systolic("");
+    setBp1Diastolic("");
+    setBp1HeartRate("");
+    setBp2Systolic("");
+    setBp2Diastolic("");
+    setBp2HeartRate("");
+    setProteinUrine("NEGATIF");
+    setSymptomHeadache(false);
+    setSymptomVision(false);
+    setSymptomEpigastric(false);
+    setSymptomDyspnea(false);
+    setLabHb("");
+    setHistoryPrevHpp(false);
+    setLabPlatelets("");
+    setLabSgot("");
+    setLabCreatinine("");
+    setClinicalNotes("");
+    setBundleChecked({});
+    setActiveInstrument("PE");
+    setShowRescreenModal(false);
+    showToast(
+      "Skrining Ulang Siap",
+      "Formulir 4 Domain (Maternal, Obstetri, Janin, Kombinasi Risiko) dan Tanda Vital telah disiapkan kembali untuk observasi terkini.",
+      "success"
+    );
   };
 
   // Handler: Ubah Status Rawat / Unit
@@ -804,6 +1225,25 @@ export function UnifiedClinicalScreeningView({
 
   // Reset Formulir
   const handleResetForm = () => {
+    if (activeInstrument === "PE") {
+      setBp1Systolic("");
+      setBp1Diastolic("");
+      setBp1HeartRate("");
+      setBp2Systolic("");
+      setBp2Diastolic("");
+      setBp2HeartRate("");
+      setProteinUrine("NEGATIF");
+      setSymptomHeadache(false);
+      setSymptomVision(false);
+      setSymptomEpigastric(false);
+      setSymptomDyspnea(false);
+      setLabPlatelets("");
+      setLabSgot("");
+      setLabCreatinine("");
+    } else {
+      setLabHb("");
+      setHistoryPrevHpp(false);
+    }
     const initMap: Record<string, ClinicalItemResponse> = {};
     currentMasters.forEach((m) => {
       initMap[m.risk_factor_id] = "TIDAK";
@@ -1158,12 +1598,21 @@ export function UnifiedClinicalScreeningView({
                 </div>
               </div>
 
-              {/* Dua Tombol Aksi di Kanan Atas: Ubah Status Rawat & Selesai / Pulang */}
-              <div className="flex items-center gap-2.5 self-start lg:self-center shrink-0">
+              {/* Tiga Tombol Aksi di Kanan Atas: Skrining Ulang, Ubah Status Rawat & Selesai / Pulang */}
+              <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowRescreenModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/40 px-3.5 py-2 text-xs font-bold text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                  title="Mulai pengkajian skrining ulang klinis untuk pasien ini"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Skrining Ulang</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowStatusModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs transition-colors cursor-pointer"
                 >
                   <ArrowRightLeft className="h-3.5 w-3.5 text-slate-500" />
                   <span>Ubah Status Rawat</span>
@@ -1171,7 +1620,7 @@ export function UnifiedClinicalScreeningView({
                 <button
                   type="button"
                   onClick={() => setShowDischargeModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
                 >
                   <CheckCheck className="h-3.5 w-3.5 text-white" />
                   <span>Selesai / Pulang</span>
@@ -1330,113 +1779,121 @@ export function UnifiedClinicalScreeningView({
               </span>
             </div>
 
-            {/* Filter Pills TINGGI / MEDIUM / RENDAH */}
+            {/* Filter Pills Dimulai dari: SEMUA -> RENDAH -> SEDANG -> TINGGI */}
             <div className="flex items-center gap-1 text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => setRiskFilter("SEMUA")}
+                onClick={() => handleSetRiskFilter("SEMUA")}
                 className={`px-3 py-1 rounded-lg text-xs transition-all ${
                   riskFilter === "SEMUA"
                     ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
-                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
                 }`}
               >
                 Semua
               </button>
               <button
                 type="button"
-                onClick={() => setRiskFilter("TINGGI")}
-                className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                  riskFilter === "TINGGI"
-                    ? "bg-rose-600 text-white"
-                    : "bg-white dark:bg-slate-800 text-rose-600 border border-rose-200 dark:border-rose-900"
-                }`}
-              >
-                TINGGI
-              </button>
-              <button
-                type="button"
-                onClick={() => setRiskFilter("MEDIUM")}
-                className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                  riskFilter === "MEDIUM"
-                    ? "bg-amber-600 text-white"
-                    : "bg-white dark:bg-slate-800 text-amber-600 border border-amber-200 dark:border-amber-900"
-                }`}
-              >
-                MEDIUM
-              </button>
-              <button
-                type="button"
-                onClick={() => setRiskFilter("RENDAH")}
+                onClick={() => handleSetRiskFilter("RENDAH")}
                 className={`px-3 py-1 rounded-lg text-xs transition-all ${
                   riskFilter === "RENDAH"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-white dark:bg-slate-800 text-emerald-600 border border-emerald-200 dark:border-emerald-900"
+                    ? "bg-emerald-600 text-white shadow-2xs"
+                    : "bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50"
                 }`}
               >
                 RENDAH
               </button>
+              <button
+                type="button"
+                onClick={() => handleSetRiskFilter("SEDANG")}
+                className={`px-3 py-1 rounded-lg text-xs transition-all ${
+                  riskFilter === "SEDANG"
+                    ? "bg-amber-500 text-white shadow-2xs"
+                    : "bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-50"
+                }`}
+              >
+                SEDANG
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetRiskFilter("TINGGI")}
+                className={`px-3 py-1 rounded-lg text-xs transition-all ${
+                  riskFilter === "TINGGI"
+                    ? "bg-rose-600 text-white shadow-2xs"
+                    : "bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 hover:bg-rose-50"
+                }`}
+              >
+                TINGGI
+              </button>
             </div>
           </div>
 
-          {/* Accordion 7 Kategori Pengkajian Risiko */}
-          <div className="space-y-2.5">
-            {RISK_CATEGORIES.map((cat) => {
-              const allItemsInCat = categorizedFactors[cat.id] || [];
-              const filteredItems = allItemsInCat.filter((item) => {
+          {/* =========================================================================
+              4 DOMAIN SKRINING KLINIS SIGAP (MATERNAL, OBSTETRI, JANIN, KOMBINASI)
+              FORMAT TAMPILAN: [DOMAIN] , [RISIKO] - [NAMA KRITERIA] - [YA / TIDAK / BELUM DI CEK]
+             ========================================================================= */}
+          <div className="space-y-4">
+            {CLINICAL_SCREENING_DOMAINS.map((domain) => {
+              const DomainIcon = domain.icon;
+              const isExpanded = expandedDomains[domain.id] ?? true;
+
+              // Filter item berdasarkan filter pill (SEMUA / RENDAH / SEDANG / TINGGI)
+              const visibleItems = domain.items.filter((item) => {
                 if (riskFilter === "SEMUA") return true;
-                if (riskFilter === "TINGGI") return item.risk_tier === "HIGH" || item.risk_tier === "CRITICAL_IMMEDIATE";
-                if (riskFilter === "MEDIUM") return item.risk_tier === "MODERATE";
-                if (riskFilter === "RENDAH") return (item.risk_tier as string) === "LOW";
+                if (riskFilter === "RENDAH") return item.riskTier === "LOW";
+                if (riskFilter === "SEDANG") return item.riskTier === "MODERATE";
+                if (riskFilter === "TINGGI") return item.riskTier === "HIGH";
                 return true;
               });
 
-              if (allItemsInCat.length === 0) return null;
+              if (visibleItems.length === 0) return null;
 
-              const isExpanded = !!expandedCategories[cat.id];
-              const unselectedInCat = allItemsInCat.filter(
-                (item) => responses[item.risk_factor_id] !== "YA" && responses[item.risk_factor_id] !== "TIDAK"
+              // Hitung statistik respon pada domain ini
+              const domainAnswered = domain.items.filter(
+                (item) => responses[item.id] === "YA" || responses[item.id] === "TIDAK"
               ).length;
+              const domainHasYes = domain.items.some((item) => responses[item.id] === "YA");
 
               return (
                 <div
-                  key={cat.id}
-                  className={`rounded-2xl ${cat.cardBorder} bg-white dark:bg-[#0c183a] overflow-hidden transition-all shadow-xs`}
+                  key={domain.id}
+                  className={`rounded-2xl ${domain.cardBorder} bg-white dark:bg-[#0c183a] overflow-hidden transition-all`}
                 >
-                  {/* Baris Accordion Header dengan Warna Lembut-Sedang (Level 200–250) */}
+                  {/* Header Accordion Domain */}
                   <div
-                    onClick={() =>
-                      setExpandedCategories((prev) => ({
-                        ...prev,
-                        [cat.id]: !prev[cat.id],
-                      }))
-                    }
-                    className={`p-3.5 ${cat.headerGradient} cursor-pointer flex items-center justify-between transition-all select-none hover:opacity-95`}
+                    onClick={() => toggleDomainExpand(domain.id)}
+                    className={`p-3.5 ${domain.headerGradient} cursor-pointer flex items-center justify-between transition-all select-none hover:opacity-95`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`h-7 w-7 rounded-lg ${cat.iconStyle} flex items-center justify-center shrink-0 shadow-2xs`}>
-                        {React.createElement(cat.icon, { className: "h-4 w-4" })}
+                      <div
+                        className={`h-7 w-7 rounded-lg ${domain.iconStyle} flex items-center justify-center shrink-0 shadow-2xs`}
+                      >
+                        <DomainIcon className="h-4 w-4" />
                       </div>
-                      <span className="font-black text-xs tracking-wider uppercase">
-                        {cat.label}
-                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-xs tracking-wider uppercase">
+                            {domain.title}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${domain.badgeStyle}`}
+                          >
+                            {domainAnswered}/{domain.items.length} Terisi
+                          </span>
+                        </div>
+                        <p className="text-[11px] opacity-80 font-medium">
+                          {domain.subtitle}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <span className={`text-[11px] font-bold ${cat.badgeStyle} px-2.5 py-0.5 rounded-full shadow-2xs`}>
-                        {allItemsInCat.length} butir
-                      </span>
-                      {unselectedInCat > 0 ? (
-                        <span className="rounded-full bg-amber-500 text-white dark:bg-amber-400 dark:text-amber-950 px-2.5 py-0.5 text-[10px] font-black shadow-xs">
-                          {unselectedInCat} belum diisi
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950 px-2.5 py-0.5 text-[10px] font-black shadow-xs flex items-center gap-1">
-                          <Check className="h-3 w-3 stroke-[3]" />
-                          Lengkap
+                    <div className="flex items-center gap-2">
+                      {domainHasYes && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white font-black text-[10px] shadow-2xs">
+                          Terindikasi
                         </span>
                       )}
-                      <div className={`p-1 rounded-md ${cat.chevronStyle}`}>
+                      <div className={`p-1 rounded-md ${domain.chevronStyle}`}>
                         {isExpanded ? (
                           <ChevronUp className="h-4 w-4" />
                         ) : (
@@ -1446,88 +1903,107 @@ export function UnifiedClinicalScreeningView({
                     </div>
                   </div>
 
-                  {/* Isi Kategori (Daftar Butir Faktor Risiko yang dimasukkan lebih ke dalam / Indented) */}
+                  {/* Isi Domain: Format [Domain] , [Risiko] - [Nama Kriteria] - [Ya / Tidak / Belum di cek] */}
                   {isExpanded && (
-                    <div className={`pl-6 sm:pl-10 pr-4 sm:pr-6 py-2 divide-y divide-slate-100 dark:divide-slate-800/80 ${cat.indentLine} ml-4 sm:ml-6 mr-3 my-2.5 rounded-r-2xl`}>
-                      {filteredItems.length === 0 ? (
-                        <div className="text-xs text-slate-400 italic py-2">
-                          Tidak ada faktor yang cocok dengan filter {riskFilter}.
-                        </div>
-                      ) : (
-                        filteredItems.map((item) => {
-                          const currentVal = responses[item.risk_factor_id] || "TIDAK";
-                          const isHigh = item.risk_tier === "HIGH" || item.risk_tier === "CRITICAL_IMMEDIATE";
-                          const isMed = item.risk_tier === "MODERATE";
+                    <div className="p-3.5 sm:p-4 space-y-2.5">
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                        {visibleItems.map((item) => {
+                          const val = responses[item.id];
+                          const isYes = val === "YA";
+                          const isNo = val === "TIDAK";
+                          const isUnchecked = val === "BELUM_DIPERIKSA" || !val;
 
                           return (
                             <div
-                              key={item.risk_factor_id}
-                              className="py-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                              key={item.id}
+                              className={`py-2.5 px-3 rounded-xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                                isYes
+                                  ? item.riskTier === "HIGH"
+                                    ? "bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60"
+                                    : item.riskTier === "MODERATE"
+                                    ? "bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60"
+                                    : "bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60"
+                                  : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                              }`}
                             >
-                              <div className="space-y-1 max-w-xl">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 shrink-0" />
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase ${
-                                      isHigh
-                                        ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200"
-                                        : isMed
-                                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200"
-                                        : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200"
-                                    }`}
-                                  >
-                                    {isHigh ? "TINGGI" : isMed ? "MEDIUM" : "RENDAH"}
-                                  </span>
-                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                    {item.label}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-3.5">
-                                  {item.definition || item.clinical_rationale}
-                                </p>
+                              {/* [Domain] , [Risiko] - [Nama Kriteria] */}
+                              <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-wrap">
+                                {/* Label Domain Mini */}
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                  {domain.name}
+                                </span>
+
+                                <span className="text-slate-300 dark:text-slate-600 font-bold hidden sm:inline">,</span>
+
+                                {/* Badge Kategori Risiko */}
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-black uppercase shrink-0 tracking-wider shadow-2xs border ${
+                                    item.riskTier === "HIGH"
+                                      ? "bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-800"
+                                      : item.riskTier === "MODERATE"
+                                      ? "bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800"
+                                      : "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800"
+                                  }`}
+                                >
+                                  {item.riskTier === "HIGH"
+                                    ? "Risiko Tinggi"
+                                    : item.riskTier === "MODERATE"
+                                    ? "Risiko Sedang"
+                                    : "Risiko Rendah"}
+                                </span>
+
+                                <span className="text-slate-400 font-bold hidden sm:inline">-</span>
+
+                                {/* Nama Kriteria */}
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug">
+                                  {item.label}
+                                </span>
                               </div>
 
-                              {/* 5-State / Fast Toggle Selector */}
-                              <div className="flex items-center gap-1 self-start md:self-center shrink-0">
+                              {/* Tombol [ Ya / Tidak / Belum di cek ] */}
+                              <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
                                 <button
                                   type="button"
-                                  onClick={() => handleSelectResponse(item.risk_factor_id, "YA")}
-                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                    currentVal === "YA"
-                                      ? "bg-rose-600 text-white shadow-xs"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                                  onClick={() => handleToggleDomainItem(item.id, "YA")}
+                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    isYes
+                                      ? item.riskTier === "HIGH"
+                                        ? "bg-rose-600 text-white shadow-xs ring-1 ring-rose-400 font-black"
+                                        : item.riskTier === "MODERATE"
+                                        ? "bg-amber-600 text-white shadow-xs ring-1 ring-amber-400 font-black"
+                                        : "bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-400 font-black"
+                                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
                                   }`}
                                 >
-                                  YA
+                                  Ya
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleSelectResponse(item.risk_factor_id, "TIDAK")}
-                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                    currentVal === "TIDAK"
-                                      ? "bg-emerald-600 text-white shadow-xs"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                                  onClick={() => handleToggleDomainItem(item.id, "TIDAK")}
+                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    isNo
+                                      ? "bg-blue-600 text-white shadow-xs ring-1 ring-blue-400 font-black"
+                                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
                                   }`}
                                 >
-                                  TIDAK
+                                  Tidak
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleSelectResponse(item.risk_factor_id, "BELUM_DIPERIKSA")}
-                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                                    currentVal === "BELUM_DIPERIKSA"
-                                      ? "bg-amber-500 text-white shadow-xs"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200"
+                                  onClick={() => handleToggleDomainItem(item.id, "BELUM_DIPERIKSA")}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                                    isUnchecked
+                                      ? "bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold border border-slate-300 dark:border-slate-600"
+                                      : "bg-white dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
                                   }`}
-                                  title="Belum Diperiksa (FR-09: Data kosong != negatif)"
                                 >
-                                  Belum Cek
+                                  Belum di cek
                                 </button>
                               </div>
                             </div>
                           );
-                        })
-                      )}
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1647,7 +2123,7 @@ export function UnifiedClinicalScreeningView({
                     : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200"
                 }`}
               >
-                KATEGORI {calculatedRisk === "HIGH" ? "TINGGI" : calculatedRisk === "MODERATE" ? "MEDIUM" : "RENDAH"}
+                KATEGORI {calculatedRisk === "LOW" ? "RISIKO RENDAH" : calculatedRisk === "MODERATE" ? "RISIKO SEDANG" : "RISIKO BERAT"}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -1724,7 +2200,7 @@ export function UnifiedClinicalScreeningView({
                   : "bg-emerald-600 text-white shadow-xs"
               }`}
             >
-              {calculatedRisk === "HIGH" ? "TINGGI" : calculatedRisk === "MODERATE" ? "MEDIUM" : "RENDAH"}
+              {calculatedRisk === "LOW" ? "RENDAH" : calculatedRisk === "MODERATE" ? "SEDANG" : "TINGGI (BERAT)"}
             </span>
             <span className="text-slate-400">•</span>
             <span className="text-slate-700 dark:text-slate-300 font-medium">
@@ -1858,6 +2334,66 @@ export function UnifiedClinicalScreeningView({
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white shadow-xs"
               >
                 Simpan Perubahan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: KONFIRMASI SKRINING ULANG
+         ========================================================================= */}
+      {showRescreenModal && currentAdmission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                Konfirmasi Skrining Ulang Pasien
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRescreenModal(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-950 dark:text-amber-200 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-amber-900 dark:text-amber-100">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Siapkan Pengkajian Klinis Observasi Baru</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Apakah Anda ingin memulai skrining ulang untuk <strong>{currentAdmission.patient?.full_name}</strong> (RM: {currentAdmission.patient?.mrn})?
+                </p>
+                <p className="text-[11px] opacity-85 leading-relaxed pt-1">
+                  Sesuai pedoman POGI, InaSH &amp; WHO, skrining ulang dilakukan saat terjadi perubahan kondisi klinis, tanda vital baru, atau evaluasi interval (&ge; 15–60 menit).
+                </p>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[11px]">
+                Formulir 4 Domain (Maternal, Obstetri, Janin, Kombinasi Risiko) dan Tanda Vital akan disiapkan kembali untuk pengisian evaluasi terkini.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowRescreenModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRescreen}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Mulai Skrining Ulang</span>
               </button>
             </div>
           </div>

@@ -257,7 +257,7 @@ export function PatientRegistrationView({
         penjamin: penjamin,
         unit_id: unitMasuk,
         unit_name: unitObj?.name || "Kamar Bersalin (VK)",
-        keluhan_utama: keluhanUtama.trim() || "Pendaftaran pasien masuk persalinan.",
+        keluhan_utama: diagnosaRujukan.trim() || keluhanUtama.trim() || "Pendaftaran pasien masuk persalinan.",
         usia_kehamilan_minggu: Number(usiaKehamilanMinggu || 38),
         usia_kehamilan_hari: Number(usiaKehamilanHari || 0),
         gravida: Number(gravida || 1),
@@ -355,27 +355,22 @@ export function PatientRegistrationView({
           adm.admission_code.toLowerCase().includes(q) ||
           (p && p.full_name.toLowerCase().includes(q)) ||
           (p && p.mrn.toLowerCase().includes(q)) ||
-          adm.asal_rujukan.toLowerCase().includes(q) ||
-          (adm.referral_facility_name && adm.referral_facility_name.toLowerCase().includes(q)) ||
+          (adm.diagnosa_rujukan && adm.diagnosa_rujukan.toLowerCase().includes(q)) ||
+          (adm.keluhan_utama && adm.keluhan_utama.toLowerCase().includes(q)) ||
+          (adm.receiving_midwife_name && adm.receiving_midwife_name.toLowerCase().includes(q)) ||
           (adm.unit?.name && adm.unit.name.toLowerCase().includes(q));
         if (!match) return false;
       }
 
       // Filter Masuk Dari Mana (Unit)
-      if (filterUnitMasuk !== "ALL" && adm.unit_id !== filterUnitMasuk) {
-        return false;
-      }
-
-      // Filter Asal Rujukan
-      if (filterAsalRujukan !== "ALL") {
-        if (!adm.asal_rujukan.toLowerCase().includes(filterAsalRujukan.toLowerCase())) {
-          return false;
-        }
-      }
-
-      // Filter Penjamin
-      if (filterPenjamin !== "ALL") {
-        if (adm.penjamin && !adm.penjamin.toLowerCase().includes(filterPenjamin.toLowerCase())) {
+      if (filterUnitMasuk !== "ALL") {
+        if (filterUnitMasuk === "unit-igd-ponek") {
+          const isIgd = adm.unit_id === "unit-igd-ponek" || (adm.unit_name && adm.unit_name.toLowerCase().includes("igd"));
+          if (!isIgd) return false;
+        } else if (filterUnitMasuk === "unit-poli") {
+          const isPoli = adm.unit_id === "unit-poli" || (adm.unit_name && (adm.unit_name.toLowerCase().includes("poli") || adm.unit_name.toLowerCase().includes("rajal")));
+          if (!isPoli) return false;
+        } else if (adm.unit_id !== filterUnitMasuk) {
           return false;
         }
       }
@@ -635,15 +630,15 @@ export function PatientRegistrationView({
               )}
             </div>
 
-            {/* BAGIAN 2: DATA KEDATANGAN MASUK & ASAL RUJUKAN (RELEVAN PENDAFTARAN RS) */}
+            {/* BAGIAN 2: DATA KEDATANGAN MASUK (UNIT, WAKTU, BIDAN, DIAGNOSA) */}
             <div className="space-y-3">
               <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-slate-100 dark:border-slate-800">
                 <Hospital className="h-4 w-4 text-blue-600" />
-                2. Data Pendaftaran Masuk & Rujukan Pasien:
+                2. Data Pendaftaran Masuk:
               </h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {/* MASUK DARI MANA (UNIT PENERIMA) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {/* 1. MASUK DARI MANA (UNIT PENERIMA) */}
                 <div>
                   <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
                     Masuk Dari Mana? (Unit Penerima) <span className="text-red-500">*</span>
@@ -653,80 +648,12 @@ export function PatientRegistrationView({
                     onChange={(e) => setUnitMasuk(e.target.value)}
                     className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-bold text-slate-900 dark:text-white"
                   >
-                    <option value="unit-igd-ponek">VK IGD PONEK (Kamar Bersalin IGD)</option>
-                    <option value="unit-vk">Kamar Bersalin (VK Sentral)</option>
-                    <option value="unit-poli">Rawat Jalan (Poliklinik Kebidanan)</option>
-                    <option value="unit-nifas">Ruang Rawat Inap Nifas / Bougenville</option>
-                    <option value="unit-hcu">HCU / ICU Maternal</option>
+                    <option value="unit-igd-ponek">IGD</option>
+                    <option value="unit-poli">Rawat Jalan (Rajal)</option>
                   </select>
                 </div>
 
-                {/* RUJUKANNYA DARI MANA (CARA MASUK) */}
-                <div>
-                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
-                    Rujukannya Dari Mana? (Asal Rujukan) <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={asalRujukan}
-                    onChange={(e) => setAsalRujukan(e.target.value)}
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-bold text-slate-900 dark:text-white"
-                  >
-                    <option value="Datang Sendiri (Non-Rujukan)">Datang Sendiri (Non-Rujukan)</option>
-                    <option value="Rujukan Puskesmas">Rujukan Puskesmas</option>
-                    <option value="Rujukan Bidan Praktik Mandiri (BPM)">Rujukan Bidan Praktik Mandiri (BPM)</option>
-                    <option value="Rujukan Klinik Pratama">Rujukan Klinik Pratama</option>
-                    <option value="Rujukan RS Lain (Tipe C/D/Swasta)">Rujukan RS Lain (Tipe C/D/Swasta)</option>
-                    <option value="Rujukan Dokter Praktik Mandiri">Rujukan Dokter Praktik Mandiri</option>
-                  </select>
-                </div>
-
-                {/* NAMA FASKES PERUJUK */}
-                <div>
-                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
-                    Nama Faskes Perujuk / Pengirim
-                  </label>
-                  <input
-                    type="text"
-                    value={namaFaskesPerujuk}
-                    onChange={(e) => setNamaFaskesPerujuk(e.target.value)}
-                    placeholder="Contoh: Puskesmas Banyumas / BPM Bd. Ratna"
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-medium text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                {/* NOMOR SURAT RUJUKAN */}
-                <div>
-                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
-                    Nomor Surat Rujukan / Pengantar
-                  </label>
-                  <input
-                    type="text"
-                    value={nomorSuratRujukan}
-                    onChange={(e) => setNomorSuratRujukan(e.target.value)}
-                    placeholder="Contoh: 0115R0011126P0001"
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-mono text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                {/* CARA BAYAR / PENJAMIN */}
-                <div>
-                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
-                    Cara Bayar / Penjamin <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={penjamin}
-                    onChange={(e) => setPenjamin(e.target.value)}
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-bold text-slate-900 dark:text-white"
-                  >
-                    <option value="BPJS Kesehatan (PBI)">BPJS Kesehatan (PBI)</option>
-                    <option value="BPJS Kesehatan (Non-PBI / Mandiri)">BPJS Kesehatan (Non-PBI / Mandiri)</option>
-                    <option value="Umum / Biaya Sendiri">Umum / Biaya Sendiri</option>
-                    <option value="Asuransi Swasta / Perusahaan">Asuransi Swasta / Perusahaan</option>
-                    <option value="Jamkesda">Jamkesda</option>
-                  </select>
-                </div>
-
-                {/* WAKTU REGISTRASI MASUK */}
+                {/* 2. WAKTU MASUK / KEDATANGAN */}
                 <div>
                   <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
                     Waktu Masuk / Kedatangan
@@ -739,65 +666,21 @@ export function PatientRegistrationView({
                   />
                 </div>
 
-                {/* DOKTER DPJP */}
-                <div>
-                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
-                    Dokter DPJP Penanggung Jawab
-                  </label>
-                  <select
-                    value={selectedDoctorId}
-                    onChange={(e) => {
-                      setSelectedDoctorId(e.target.value);
-                      const d = db.master_catalog?.doctors?.find((doc) => doc.doctor_id === e.target.value);
-                      if (d) setDoctorNameManual(d.full_name);
-                    }}
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-bold text-slate-900 dark:text-white"
-                  >
-                    {db.master_catalog?.doctors && db.master_catalog.doctors.length > 0 ? (
-                      db.master_catalog.doctors.map((doc) => (
-                        <option key={doc.doctor_id} value={doc.doctor_id}>
-                          {doc.full_name} — {doc.specialty}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="usr-dokter">dr. Hepta, Sp.OG</option>
-                        <option value="usr-dokter-02">dr. Gatot, Sp.OG</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                {/* BIDAN / PERAWAT PENERIMA */}
+                {/* 3. BIDAN / PERAWAT PENERIMA */}
                 <div>
                   <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
                     Bidan / Perawat Penerima Admisi
                   </label>
-                  <select
-                    value={selectedMidwifeId}
-                    onChange={(e) => {
-                      setSelectedMidwifeId(e.target.value);
-                      const m = db.master_catalog?.midwives_nurses?.find((mid) => mid.staff_id === e.target.value);
-                      if (m) setMidwifeNameManual(m.full_name);
-                    }}
+                  <input
+                    type="text"
+                    value={midwifeNameManual}
+                    onChange={(e) => setMidwifeNameManual(e.target.value)}
+                    placeholder="Contoh: bd. Hasta / Bd. Ratna, S.Tr.Keb"
                     className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-bold text-slate-900 dark:text-white"
-                  >
-                    {db.master_catalog?.midwives_nurses && db.master_catalog.midwives_nurses.length > 0 ? (
-                      db.master_catalog.midwives_nurses.map((mid) => (
-                        <option key={mid.staff_id} value={mid.staff_id}>
-                          {mid.full_name} ({mid.profession} - {mid.shift})
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="usr-bidan">bd. Hasta — Bidan Shift Pagi</option>
-                        <option value="usr-bidan-02">bd. Ratna — Bidan Shift Sore</option>
-                      </>
-                    )}
-                  </select>
+                  />
                 </div>
 
-                {/* DIAGNOSA AWAL RUJUKAN */}
+                {/* 4. DIAGNOSA AWAL RUJUKAN */}
                 <div>
                   <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
                     Diagnosa Awal / Pengantar Perujuk
@@ -810,43 +693,6 @@ export function PatientRegistrationView({
                     className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-medium text-slate-900 dark:text-white"
                   />
                 </div>
-              </div>
-
-              {/* KELUHAN UTAMA SAAT MENDAFTAR (DENGAN TEMPLATE DROPDOWN) */}
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
-                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-200">
-                    Keluhan Utama / Alasan Admisi Masuk <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-blue-900 dark:text-blue-300 whitespace-nowrap">
-                      Template Keluhan:
-                    </span>
-                    <select
-                      value={selectedComplaintTemplate}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedComplaintTemplate(val);
-                        if (val) setKeluhanUtama(val);
-                      }}
-                      className="py-1.5 px-3 rounded-xl border-2 border-blue-300 dark:border-blue-700 bg-blue-50/80 dark:bg-blue-950/80 text-xs font-bold text-blue-950 dark:text-blue-100 focus:ring-2 focus:ring-blue-500/20 max-w-full sm:max-w-md truncate shadow-2xs"
-                    >
-                      {COMPLAINT_TEMPLATES.map((tpl, idx) => (
-                        <option key={idx} value={tpl.value}>
-                          {tpl.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <textarea
-                  rows={2}
-                  required
-                  value={keluhanUtama}
-                  onChange={(e) => setKeluhanUtama(e.target.value)}
-                  placeholder="Deskripsikan alasan atau keluhan utama saat pasien datang (bisa memilih template dropdown di atas lalu disesuaikan)..."
-                  className="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 font-medium text-slate-900 dark:text-white"
-                />
               </div>
             </div>
 
@@ -1098,7 +944,7 @@ export function PatientRegistrationView({
               Daftar Pendaftaran Pasien Masuk RS ({filteredAdmissions.length} Kunjungan)
             </h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Menampilkan riwayat pendaftaran kedatangan pasien, unit penerima, asal rujukan, dan status skrining klinis.
+              Menampilkan riwayat pendaftaran kedatangan pasien, unit penerima (IGD / Rajal), diagnosa, dan status skrining klinis.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1123,7 +969,7 @@ export function PatientRegistrationView({
               type="text"
               value={searchAdmQuery}
               onChange={(e) => setSearchAdmQuery(e.target.value)}
-              placeholder="Cari berdasarkan No. RM, Nama Pasien, No. Admisi, atau Nama Faskes Perujuk..."
+              placeholder="Cari berdasarkan No. RM, Nama Pasien, No. Admisi, Bidan, atau Diagnosa..."
               className="w-full pl-10 pr-9 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
             {searchAdmQuery && (
@@ -1137,55 +983,19 @@ export function PatientRegistrationView({
             )}
           </div>
 
-          {/* BARIS DROPDOWN FILTER LENGKAP */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
-            {/* Filter Masuk Dari Mana (Unit) */}
+          {/* BARIS DROPDOWN FILTER (DISESUAIKAN DENGAN INPUTAN) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            {/* Filter Masuk Dari Mana (Unit: IGD / Rajal) */}
             <div>
               <span className="block text-[10px] font-bold text-slate-500 mb-0.5">Masuk Dari Mana:</span>
               <select
                 value={filterUnitMasuk}
                 onChange={(e) => setFilterUnitMasuk(e.target.value)}
-                className="w-full py-1.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
+                className="w-full py-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
               >
                 <option value="ALL">Semua Unit</option>
-                <option value="unit-igd-ponek">VK IGD PONEK</option>
-                <option value="unit-vk">Kamar Bersalin (VK)</option>
-                <option value="unit-poli">Poli Kebidanan</option>
-                <option value="unit-nifas">Rawat Nifas</option>
-                <option value="unit-hcu">HCU Maternal</option>
-              </select>
-            </div>
-
-            {/* Filter Rujukan Dari Mana */}
-            <div>
-              <span className="block text-[10px] font-bold text-slate-500 mb-0.5">Rujukan Dari Mana:</span>
-              <select
-                value={filterAsalRujukan}
-                onChange={(e) => setFilterAsalRujukan(e.target.value)}
-                className="w-full py-1.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
-              >
-                <option value="ALL">Semua Asal Rujukan</option>
-                <option value="Datang Sendiri">Datang Sendiri</option>
-                <option value="Puskesmas">Puskesmas</option>
-                <option value="Bidan">Bidan Mandiri (BPM)</option>
-                <option value="Klinik">Klinik Pratama</option>
-                <option value="RS">RS Lain</option>
-              </select>
-            </div>
-
-            {/* Filter Penjamin / Cara Bayar */}
-            <div>
-              <span className="block text-[10px] font-bold text-slate-500 mb-0.5">Cara Bayar:</span>
-              <select
-                value={filterPenjamin}
-                onChange={(e) => setFilterPenjamin(e.target.value)}
-                className="w-full py-1.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
-              >
-                <option value="ALL">Semua Penjamin</option>
-                <option value="PBI">BPJS PBI</option>
-                <option value="Non-PBI">BPJS Mandiri</option>
-                <option value="Umum">Umum / Mandiri</option>
-                <option value="Asuransi">Asuransi Swasta</option>
+                <option value="unit-igd-ponek">IGD</option>
+                <option value="unit-poli">Rawat Jalan (Rajal)</option>
               </select>
             </div>
 
@@ -1195,7 +1005,7 @@ export function PatientRegistrationView({
               <select
                 value={filterScreeningStatus}
                 onChange={(e) => setFilterScreeningStatus(e.target.value)}
-                className="w-full py-1.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
+                className="w-full py-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
               >
                 <option value="ALL">Semua Skrining</option>
                 <option value="HIGH">Risiko Tinggi (Merah)</option>
@@ -1211,7 +1021,7 @@ export function PatientRegistrationView({
               <select
                 value={filterStatusPelayanan}
                 onChange={(e) => setFilterStatusPelayanan(e.target.value)}
-                className="w-full py-1.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
+                className="w-full py-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
               >
                 <option value="ACTIVE">Pelayanan Aktif</option>
                 <option value="CLOSED">Selesai / Pulang (RPP)</option>
@@ -1225,7 +1035,7 @@ export function PatientRegistrationView({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full py-1.5 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
+                className="w-full py-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0c183a] text-xs font-semibold text-slate-700 dark:text-slate-200"
               >
                 <option value="NEWEST">Terbaru Masuk</option>
                 <option value="OLDEST">Terlama Masuk</option>
@@ -1236,7 +1046,7 @@ export function PatientRegistrationView({
           </div>
         </div>
 
-        {/* TABEL DAFTAR PENDAFTARAN PASIEN MASUK */}
+        {/* TABEL DAFTAR PENDAFTARAN PASIEN MASUK (SESUAI INPUTAN) */}
         <div className="rounded-xl border border-blue-200/90 dark:border-blue-900/80 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700 dark:text-slate-200">
@@ -1245,9 +1055,8 @@ export function PatientRegistrationView({
                   <th className="py-3 px-3">No. Admisi / Waktu</th>
                   <th className="py-3 px-3">Pasien & No. RM</th>
                   <th className="py-3 px-3">Masuk Dari Mana</th>
-                  <th className="py-3 px-3">Rujukan Dari Mana</th>
-                  <th className="py-3 px-3">Cara Bayar</th>
-                  <th className="py-3 px-3">DPJP / Bidan</th>
+                  <th className="py-3 px-3">Diagnosa Awal</th>
+                  <th className="py-3 px-3">Bidan / Penerima</th>
                   <th className="py-3 px-3">Hasil Skrining</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3 text-right">Aksi</th>
@@ -1256,7 +1065,7 @@ export function PatientRegistrationView({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {filteredAdmissions.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-slate-400">
                       <ClipboardPlus className="h-8 w-8 mx-auto mb-2 opacity-30 text-blue-600" />
                       <p className="font-bold">Tidak ada pendaftaran admisi yang sesuai filter</p>
                       <p className="text-[11px] mt-0.5">Gunakan formulir di atas untuk mendaftarkan pasien masuk RS.</p>
@@ -1296,45 +1105,30 @@ export function PatientRegistrationView({
                           </div>
                         </td>
 
-                        {/* MASUK DARI MANA */}
+                        {/* MASUK DARI MANA (IGD / RAJAL) */}
                         <td className="py-3 px-3 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-blue-50 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200">
                             <Hospital className="h-3 w-3 text-blue-600" />
-                            {adm.unit?.name || adm.unit_name || "Kamar Bersalin (VK)"}
+                            {adm.unit_id === "unit-poli" || (adm.unit_name && (adm.unit_name.toLowerCase().includes("poli") || adm.unit_name.toLowerCase().includes("rajal") || adm.unit_name.toLowerCase().includes("rawat jalan")))
+                              ? "Rawat Jalan (Rajal)"
+                              : "IGD"}
                           </span>
                         </td>
 
-                        {/* RUJUKAN DARI MANA */}
+                        {/* DIAGNOSA AWAL / PENGANTAR */}
                         <td className="py-3 px-3">
-                          <div className="font-bold text-slate-800 dark:text-slate-200">
-                            {adm.asal_rujukan}
+                          <div className="font-bold text-slate-800 dark:text-slate-200 max-w-[200px] line-clamp-2" title={adm.diagnosa_rujukan || adm.keluhan_utama || "-"}>
+                            {adm.diagnosa_rujukan || adm.keluhan_utama || "-"}
                           </div>
-                          {adm.referral_facility_name && (
-                            <div className="text-[10px] text-slate-400 truncate max-w-[170px]" title={adm.referral_facility_name}>
-                              {adm.referral_facility_name}
-                            </div>
-                          )}
-                          {adm.nomor_rujukan && (
-                            <div className="text-[9px] text-blue-600 font-mono">
-                              No: {adm.nomor_rujukan}
-                            </div>
-                          )}
                         </td>
 
-                        {/* CARA BAYAR */}
+                        {/* BIDAN / PERAWAT PENERIMA */}
                         <td className="py-3 px-3 whitespace-nowrap">
-                          <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                            {adm.penjamin || "BPJS Kesehatan"}
-                          </span>
-                        </td>
-
-                        {/* DPJP / BIDAN */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <div className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
-                            {adm.attending_doctor_name || "dr. DPJP"}
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate max-w-[130px]">
+                          <div className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px]">
                             {adm.receiving_midwife_name || "Bd. Penerima"}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Bidan / Perawat Penerima
                           </div>
                         </td>
 
