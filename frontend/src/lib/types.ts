@@ -41,7 +41,7 @@ export interface User {
 // 2. Status Standar Sistem (SRS Bab 13 & FR-09)
 export type AdmissionStatus = "DRAFT" | "ACTIVE" | "CLOSED";
 export type ScreeningStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "NEEDS_REVIEW";
-export type RiskCategory = "LOW" | "MODERATE" | "HIGH" | "UNDETERMINED";
+export type RiskCategory = "LOW" | "MODERATE" | "HIGH";
 export type AlertStatus = "OPEN" | "ACKNOWLEDGED" | "ESCALATED" | "RESOLVED";
 export type AlertSeverity = "CRITICAL_PRIORITY" | "HIGH" | "WARNING" | "INFO";
 export type ActionStatus = "PLANNED" | "IN_PROGRESS" | "DONE" | "NOT_APPLICABLE";
@@ -289,7 +289,7 @@ export interface ScreeningResult {
   admission_id: string;
   screening_id: string;
   screening_type: "PE" | "HPP";
-  category: RiskCategory; // LOW | MODERATE | HIGH | UNDETERMINED
+  category: RiskCategory; // LOW | MODERATE | HIGH
   priority_alert_triggered: boolean;
   summary_headline: string;
   rationale: string[]; // Alasan klasifikasi transparan

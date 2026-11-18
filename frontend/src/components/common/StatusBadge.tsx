@@ -148,14 +148,9 @@ export function RiskCategoryBadge({
       classes: "bg-red-50 text-red-800 border-red-300",
       dot: "bg-red-600",
     },
-    UNDETERMINED: {
-      label: "BELUM DAPAT DITENTUKAN (UNDETERMINED)",
-      classes: "bg-purple-50 text-purple-800 border-purple-300",
-      dot: "bg-purple-600",
-    },
   };
 
-  const cfg = map[category];
+  const cfg = (category && map[category as RiskCategory]) || map.LOW;
   const sizeClass =
     size === "lg"
       ? "px-4 py-1.5 text-sm font-bold"

@@ -382,27 +382,25 @@ export function evaluatePeScreening(input: PeEvaluationInput): ScreeningResult {
     category = "MODERATE";
     summaryHeadline =
       "Risiko Preeklamsia SEDANG — Pantau Berkala, Istirahatkan Ibu, Evaluasi TD Ulang >= 15 Menit";
-  } else if (missingFields.length > 0) {
-    // Bab 6 & Bab 13: Data belum cukup tidak boleh otomatis dianggap LOW/Normal
-    category = "UNDETERMINED";
-    summaryHeadline =
-      "Belum Dapat Ditentukan (UNDETERMINED) — Terdapat Data Esensial yang Belum Diperiksa / Belum Tersedia";
-    rationale.push(
-      `PERINGATAN KESELAMATAN (NFR-09): Ditemukan ${missingFields.length} parameter berstatus Belum Diperiksa / Tidak Diketahui / Belum Tersedia. Sistem tidak mengasumsikan data kosong sebagai normal.`
-    );
   } else {
     category = "LOW";
     summaryHeadline =
       "Risiko Preeklamsia RENDAH — Lanjutkan Pemantauan Admisi Rutin Sesuai Protokol";
-    rationale.push(
-      "Seluruh parameter tekanan darah, gejala klinis, dan faktor risiko PE telah diperiksa dan berada dalam batas normal."
-    );
+    if (missingFields.length > 0) {
+      rationale.push(
+        `Catatan Klinis: Terdapat ${missingFields.length} parameter yang belum diperiksa / belum tersedia. Lanjutkan pemantauan rutin dan evaluasi berkala bila muncul keluhan baru.`
+      );
+    } else {
+      rationale.push(
+        "Seluruh parameter tekanan darah, gejala klinis, dan faktor risiko PE telah diperiksa dan berada dalam batas normal."
+      );
+    }
   }
 
   const recommendedChecklists =
     category === "HIGH"
       ? protocol.readiness_checklists.PE_HIGH
-      : category === "MODERATE" || category === "UNDETERMINED"
+      : category === "MODERATE"
       ? protocol.readiness_checklists.PE_MODERATE
       : protocol.readiness_checklists.PE_LOW;
 
@@ -615,7 +613,7 @@ export function evaluateHppScreening(input: HppEvaluationInput): ScreeningResult
     );
   }
 
-  // 4. Penentuan Kategori Risiko HPP (LOW | MODERATE | HIGH | UNDETERMINED)
+  // 4. Penentuan Kategori Risiko HPP (LOW | MODERATE | HIGH)
   let category: RiskCategory = "LOW";
   let summaryHeadline = "";
 
@@ -632,26 +630,25 @@ export function evaluateHppScreening(input: HppEvaluationInput): ScreeningResult
     category = "MODERATE";
     summaryHeadline =
       "Risiko HPP SEDANG — Siagakan Akses IV Besar, Pemeriksaan Golongan Darah & Manajemen Aktif Kala III";
-  } else if (missingFields.length > 0) {
-    category = "UNDETERMINED";
-    summaryHeadline =
-      "Belum Dapat Ditentukan (UNDETERMINED) — Terdapat Faktor 4T / Lab yang Belum Diperiksa";
-    rationale.push(
-      `PERINGATAN KESELAMATAN (NFR-09): Masih terdapat ${missingFields.length} item faktor risiko 4T atau Hb yang berstatus Belum Diperiksa / Belum Tersedia. Jangan anggap kosong sebagai negatif.`
-    );
   } else {
     category = "LOW";
     summaryHeadline =
       "Risiko HPP RENDAH — Lakukan Manajemen Aktif Kala III Standar & Observasi Kehilangan Darah Objektif";
-    rationale.push(
-      "Seluruh domain 4T (Tonus, Trauma, Jaringan, Trombin) dan faktor tambahan telah dinilai negatif."
-    );
+    if (missingFields.length > 0) {
+      rationale.push(
+        `Catatan Klinis: Terdapat ${missingFields.length} faktor risiko 4T / lab yang belum diperiksa / belum tersedia. Tetap lakukan pemantauan berkala dan re-evaluasi bila kondisi klinis berubah.`
+      );
+    } else {
+      rationale.push(
+        "Seluruh domain 4T (Tonus, Trauma, Jaringan, Trombin) dan faktor tambahan telah dinilai negatif."
+      );
+    }
   }
 
   const recommendedChecklists =
     category === "HIGH"
       ? protocol.readiness_checklists.HPP_HIGH
-      : category === "MODERATE" || category === "UNDETERMINED"
+      : category === "MODERATE"
       ? protocol.readiness_checklists.HPP_MODERATE
       : protocol.readiness_checklists.HPP_LOW;
 

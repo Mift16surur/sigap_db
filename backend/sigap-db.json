@@ -3028,11 +3028,11 @@
       "admission_id": "adm-1794505030041",
       "screening_id": "pe-scr-1794505030041",
       "screening_type": "PE",
-      "category": "UNDETERMINED",
+      "category": "LOW",
       "priority_alert_triggered": false,
-      "summary_headline": "Belum Dapat Ditentukan (UNDETERMINED) — Terdapat Data Esensial yang Belum Diperiksa / Belum Tersedia",
+      "summary_headline": "Risiko Preeklamsia RENDAH — Lanjutkan Pemantauan Admisi Rutin Sesuai Protokol",
       "rationale": [
-        "PERINGATAN KESELAMATAN (NFR-09): Ditemukan 7 parameter berstatus Belum Diperiksa / Tidak Diketahui / Belum Tersedia. Sistem tidak mengasumsikan data kosong sebagai normal."
+        "Catatan Klinis: Ditemukan 7 parameter berstatus Belum Diperiksa / Tidak Diketahui / Belum Tersedia. Lanjutkan pemantauan berkala."
       ],
       "triggered_indicators": [],
       "missing_or_unknown_fields": [
@@ -3062,11 +3062,11 @@
       "admission_id": "adm-1794505030041",
       "screening_id": "hpp-scr-1794505030041",
       "screening_type": "HPP",
-      "category": "UNDETERMINED",
+      "category": "LOW",
       "priority_alert_triggered": false,
-      "summary_headline": "Belum Dapat Ditentukan (UNDETERMINED) — Terdapat Faktor 4T / Lab yang Belum Diperiksa",
+      "summary_headline": "Risiko HPP RENDAH — Lakukan Manajemen Aktif Kala III Standar & Observasi Kehilangan Darah Objektif",
       "rationale": [
-        "PERINGATAN KESELAMATAN (NFR-09): Masih terdapat 1 item faktor risiko 4T atau Hb yang berstatus Belum Diperiksa / Belum Tersedia. Jangan anggap kosong sebagai negatif."
+        "Catatan Klinis: Masih terdapat 1 item faktor risiko 4T atau Hb yang berstatus Belum Diperiksa / Belum Tersedia. Lanjutkan pemantauan rutin."
       ],
       "triggered_indicators": [],
       "missing_or_unknown_fields": [
@@ -3228,7 +3228,7 @@
       "pathway": "HPP",
       "action_code": "HPP_CHECKLIST_ITEM",
       "action_label": "Pasang akses intravena kaliber besar (minimal 1 jalur kanul 16G/18G)",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "IN_PROGRESS",
       "protocol_version_id": "proto-v1.2-2026",
       "performed_at": "2026-11-13T06:43:34.266Z",
@@ -3240,7 +3240,7 @@
       "pathway": "HPP",
       "action_code": "HPP_CHECKLIST_ITEM",
       "action_label": "Kirim sampel pemeriksaan Golongan Darah, Rhesus, dan Skrining Antibodi (Type & Screen)",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "IN_PROGRESS",
       "protocol_version_id": "proto-v1.2-2026",
       "performed_at": "2026-11-13T06:43:36.863Z",
@@ -3252,7 +3252,7 @@
       "pathway": "HPP",
       "action_code": "HPP_CHECKLIST_ITEM",
       "action_label": "Pastikan ketersediaan uterotonika lini pertama dan kedua di kamar bersalin",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -3262,7 +3262,7 @@
       "pathway": "HPP",
       "action_code": "HPP_CHECKLIST_ITEM",
       "action_label": "Informasikan bidan senior dan dokter jaga mengenai profil risiko sedang HPP (Domain 4T)",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -3272,7 +3272,7 @@
       "pathway": "HPP",
       "action_code": "HPP_CHECKLIST_ITEM",
       "action_label": "Ukur kehilangan darah secara objektif (graduated drape / timbang kasa) sejak segera setelah lahir",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -3282,7 +3282,7 @@
       "pathway": "PE",
       "action_code": "PE_CHECKLIST_ITEM",
       "action_label": "Ulangi dan verifikasi pengukuran tekanan darah dengan posisi duduk/semi-Fowler dan manset sesuai",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -3292,7 +3292,7 @@
       "pathway": "PE",
       "action_code": "PE_CHECKLIST_ITEM",
       "action_label": "Lengkapi pemeriksaan protein urin dan laboratorium dasar (Hb, Trombosit, SGOT/SGPT, Kreatinin)",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -3302,7 +3302,7 @@
       "pathway": "PE",
       "action_code": "PE_CHECKLIST_ITEM",
       "action_label": "Evaluasi gejala klinis preeklamsia setiap pergantian shift atau sesuai protokol",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -3312,7 +3312,7 @@
       "pathway": "PE",
       "action_code": "PE_CHECKLIST_ITEM",
       "action_label": "Laporkan ke dokter jaga/DPJP untuk rencana pengawasan antenatal/intrapartum",
-      "category_context": "UNDETERMINED",
+      "category_context": "LOW",
       "status": "PLANNED",
       "protocol_version_id": "proto-v1.2-2026"
     },
@@ -4364,7 +4364,7 @@
       "entity_id": "res-pe-1794538668224",
       "action": "EVALUATE_SCREENING",
       "timestamp": "2026-11-13T02:57:48.225Z",
-      "change_summary": "Skrining PE feri atrina (494949) -> Kategori UNDETERMINED (0 pemicu, 7 data belum tersedia).",
+      "change_summary": "Skrining PE feri atrina (494949) -> Kategori LOW (0 pemicu, 7 data belum tersedia).",
       "protocol_version_ref": "v1.2-2026.11"
     },
     {
@@ -4376,7 +4376,7 @@
       "entity_id": "res-hpp-1794538642379",
       "action": "EVALUATE_SCREENING",
       "timestamp": "2026-11-13T02:57:22.379Z",
-      "change_summary": "Skrining HPP 4T feri atrina (494949) -> Kategori UNDETERMINED (0 faktor pemicu, 1 data belum tersedia).",
+      "change_summary": "Skrining HPP 4T feri atrina (494949) -> Kategori LOW (0 faktor pemicu, 1 data belum tersedia).",
       "protocol_version_ref": "v1.2-2026.11"
     },
     {
