@@ -9,6 +9,7 @@ import {
   ChiefComplaintTemplate,
   ClinicalScreeningCriterionMaster,
   ComorbidityTemplate,
+  DEFAULT_CLINICAL_SCREENING_CRITERIA,
   DoctorMaster,
   HospitalUnit,
   MidwifeNurseMaster,
@@ -546,6 +547,27 @@ export async function POST(req: Request) {
     const deleted = db.master_catalog.clinical_screening_criteria.splice(cIndex, 1)[0];
     saveDb(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.criterion_id });
+  }
+
+  // 8d. Seed / Reset Master Kriteria Skrining Klinis Standar (23 Butir)
+  if (action === "SEED_SCREENING_CRITERIA_MASTER") {
+    db.master_catalog.clinical_screening_criteria = JSON.parse(
+      JSON.stringify(DEFAULT_CLINICAL_SCREENING_CRITERIA)
+    );
+    appendAuditLog(db, {
+      userId,
+      entity: "clinical_screening_criteria",
+      entityId: "seed-23-criteria",
+      action: "CREATE",
+      changeSummary: "Menyinkronkan 23 kriteria skrining standar ke Master Data.",
+    });
+    saveDb(db);
+    const criteriaList = db.master_catalog.clinical_screening_criteria || [];
+    return NextResponse.json({
+      ok: true,
+      count: criteriaList.length,
+      criteria: criteriaList,
+    });
   }
 
   return NextResponse.json(

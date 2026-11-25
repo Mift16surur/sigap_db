@@ -24,17 +24,19 @@ import {
   Filter,
   Search,
   Power,
+  RefreshCw,
 } from "lucide-react";
 import { apiRequest, BootstrapResponse } from "@/lib/api-client";
-import type {
-  ClinicalScreeningCriterionMaster,
-  DoctorMaster,
-  Domain4T,
-  HospitalUnit,
-  MidwifeNurseMaster,
-  ReferralFacilityMaster,
-  RiskCategory,
-  ScreeningDomainId,
+import {
+  DEFAULT_CLINICAL_SCREENING_CRITERIA,
+  type ClinicalScreeningCriterionMaster,
+  type DoctorMaster,
+  type Domain4T,
+  type HospitalUnit,
+  type MidwifeNurseMaster,
+  type ReferralFacilityMaster,
+  type RiskCategory,
+  type ScreeningDomainId,
 } from "@/lib/types";
 
 type MasterTab =
@@ -56,6 +58,13 @@ export function MasterDataView({
 }) {
   const { db } = data;
   const catalog = db.master_catalog;
+
+  const isCloudCriteriaEmpty =
+    !catalog.clinical_screening_criteria || catalog.clinical_screening_criteria.length === 0;
+
+  const allCriteria: ClinicalScreeningCriterionMaster[] = !isCloudCriteriaEmpty
+    ? catalog.clinical_screening_criteria!
+    : DEFAULT_CLINICAL_SCREENING_CRITERIA;
 
   const [tab, setTab] = useState<MasterTab>("SCREENING_CRITERIA");
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -423,7 +432,7 @@ export function MasterDataView({
           {
             id: "SCREENING_CRITERIA",
             step: "1",
-            label: `Master Kriteria Skrining (${catalog.clinical_screening_criteria?.length || 0})`,
+            label: `Master Kriteria Skrining (${allCriteria.length})`,
             icon: ShieldAlert,
           },
           {
@@ -523,41 +532,67 @@ export function MasterDataView({
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-mono text-xs font-black shadow-xs">
-                  {(catalog.clinical_screening_criteria || []).length} Kriteria Terdaftar
+                  {allCriteria.length} Kriteria Terdaftar
                 </span>
               </div>
             </div>
+
+            {/* Banner Sinkronisasi Server Jika Data Cloud Masih Kosong */}
+            {isCloudCriteriaEmpty && (
+              <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>
+                    <strong>Database Server Cloud Belum Terisi:</strong> Menampilkan 23 kriteria standar bawaan. Klik tombol di kanan untuk menyinkronkan data ini ke database server cloud Anda.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    postMasterAction(
+                      { action: "SEED_SCREENING_CRITERIA_MASTER" },
+                      "23 Kriteria Skrining Klinis berhasil disinkronkan ke database server cloud!"
+                    )
+                  }
+                  disabled={submitting}
+                  className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer ml-auto"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Sinkronkan 23 Kriteria ke Server</span>
+                </button>
+              </div>
+            )}
 
             {/* Quick Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1 text-xs font-bold">
               <div className="rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-950/40 p-2.5 text-center">
                 <div className="text-[10px] text-rose-700 dark:text-rose-300 uppercase">1. Maternal</div>
                 <div className="text-base font-black text-rose-900 dark:text-rose-100">
-                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_MATERNAL").length}
+                  {allCriteria.filter((c) => c.domain_id === "DOMAIN_MATERNAL").length}
                 </div>
               </div>
               <div className="rounded-xl border border-blue-300 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 p-2.5 text-center">
                 <div className="text-[10px] text-blue-700 dark:text-blue-300 uppercase">2. Obstetri</div>
                 <div className="text-base font-black text-blue-900 dark:text-blue-100">
-                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_OBSTETRI").length}
+                  {allCriteria.filter((c) => c.domain_id === "DOMAIN_OBSTETRI").length}
                 </div>
               </div>
               <div className="rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-950/40 p-2.5 text-center">
                 <div className="text-[10px] text-purple-700 dark:text-purple-300 uppercase">3. Janin</div>
                 <div className="text-base font-black text-purple-900 dark:text-purple-100">
-                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_JANIN").length}
+                  {allCriteria.filter((c) => c.domain_id === "DOMAIN_JANIN").length}
                 </div>
               </div>
               <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/40 p-2.5 text-center">
                 <div className="text-[10px] text-amber-700 dark:text-amber-300 uppercase">4. Kombinasi</div>
                 <div className="text-base font-black text-amber-900 dark:text-amber-100">
-                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_KOMBINASI").length}
+                  {allCriteria.filter((c) => c.domain_id === "DOMAIN_KOMBINASI").length}
                 </div>
               </div>
               <div className="col-span-2 sm:col-span-1 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-2.5 text-center">
                 <div className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase">Status Aktif</div>
                 <div className="text-base font-black text-emerald-900 dark:text-emerald-100">
-                  {(catalog.clinical_screening_criteria || []).filter((c) => c.active_status).length} / {(catalog.clinical_screening_criteria || []).length}
+                  {allCriteria.filter((c) => c.active_status).length} / {allCriteria.length}
                 </div>
               </div>
             </div>
@@ -753,7 +788,7 @@ export function MasterDataView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {((catalog.clinical_screening_criteria || [])
+                      {allCriteria
                         .filter((c) => {
                           if (critFilterDomain !== "ALL" && c.domain_id !== critFilterDomain) return false;
                           if (critFilterTier !== "ALL" && c.risk_tier !== critFilterTier) return false;
@@ -767,7 +802,7 @@ export function MasterDataView({
                           return true;
                         })
                         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-                      ).map((c, idx) => {
+                        .map((c, idx) => {
                         const domainLabel =
                           c.domain_id === "DOMAIN_MATERNAL"
                             ? "1. Maternal"

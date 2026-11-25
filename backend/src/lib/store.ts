@@ -8,7 +8,13 @@ import fs from "fs";
 import path from "path";
 import jwt from "jsonwebtoken";
 import { initialSigapDatabase } from "./seed-data";
-import { AuditLog, SigapDatabase, User, UserRole } from "./types";
+import {
+  AuditLog,
+  DEFAULT_CLINICAL_SCREENING_CRITERIA,
+  SigapDatabase,
+  User,
+  UserRole,
+} from "./types";
 
 function resolveDataFilePath(): string {
   const p1 = path.join(process.cwd(), "sigap-db.json");
@@ -54,6 +60,14 @@ export function getDb(): SigapDatabase {
         if (!parsed.master_catalog) {
           parsed.master_catalog = JSON.parse(
             JSON.stringify(initialSigapDatabase.master_catalog)
+          );
+        }
+        if (
+          !Array.isArray(parsed.master_catalog.clinical_screening_criteria) ||
+          parsed.master_catalog.clinical_screening_criteria.length === 0
+        ) {
+          parsed.master_catalog.clinical_screening_criteria = JSON.parse(
+            JSON.stringify(DEFAULT_CLINICAL_SCREENING_CRITERIA)
           );
         }
         if (!Array.isArray(parsed.patients)) parsed.patients = [];

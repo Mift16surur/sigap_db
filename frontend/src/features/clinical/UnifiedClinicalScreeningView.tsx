@@ -36,6 +36,7 @@ import {
   AlertOctagon,
 } from "lucide-react";
 import { apiRequest, EnrichedAdmission } from "@/services/api-client";
+import { DEFAULT_CLINICAL_SCREENING_CRITERIA } from "@/types";
 import type {
   ClinicalItemResponse,
   ClinicalProtocol,
@@ -557,8 +558,13 @@ export function UnifiedClinicalScreeningView({
 
   // Dynamic Screening Domains loaded from Master Data, with fallback to default 23 items
   const activeScreeningDomains: ScreeningDomainGroup[] = useMemo(() => {
-    const masterList =
-      db.master_catalog?.clinical_screening_criteria?.filter((c) => c.active_status) || [];
+    const rawList =
+      db.master_catalog?.clinical_screening_criteria &&
+      db.master_catalog.clinical_screening_criteria.length > 0
+        ? db.master_catalog.clinical_screening_criteria
+        : DEFAULT_CLINICAL_SCREENING_CRITERIA;
+
+    const masterList = rawList.filter((c) => c.active_status);
     if (masterList.length === 0) {
       return CLINICAL_SCREENING_DOMAINS;
     }
