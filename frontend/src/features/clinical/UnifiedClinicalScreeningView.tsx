@@ -307,6 +307,15 @@ export function UnifiedClinicalScreeningView({
     );
   }, [currentAdmission]);
 
+  // Status Apakah Skrining HPP Pasien Ini Sudah Selesai Dibuat/Dievaluasi
+  const isHppScreeningCompleted = useMemo(() => {
+    if (!currentAdmission) return false;
+    return Boolean(
+      currentAdmission.latest_hpp_result?.category ||
+      (currentAdmission.hpp_screening && currentAdmission.hpp_screening.status === "COMPLETED")
+    );
+  }, [currentAdmission]);
+
   // Alur Klinis Wajib: Bila pasien belum menyelesaikan Skrining PE, tab HPP otomatis terkunci dan kembali ke PE
   useEffect(() => {
     if (!isPeScreeningCompleted && activeInstrument === "HPP") {
@@ -1086,20 +1095,27 @@ export function UnifiedClinicalScreeningView({
       }
 
       const patientName = currentAdmission.patient?.full_name || "Pasien";
+      const riskLabelIndo =
+        calculatedRisk === "HIGH"
+          ? "TINGGI"
+          : calculatedRisk === "MODERATE"
+          ? "SEDANG"
+          : "RENDAH";
+
       if (activeInstrument === "PE") {
-        const msg = `Hasil Skrining Risiko PE berhasil disimpan (Kategori: ${calculatedRisk})! Skrining Risiko HPP sekarang telah terbuka.`;
+        const msg = `Hasil Skrining Risiko PE berhasil disimpan (Kategori: ${riskLabelIndo})! Skrining Risiko HPP sekarang telah terbuka.`;
         setSuccessMessage(msg);
         showToast(
           "Rekam Medis Berhasil Disimpan!",
-          `Skrining Risiko PE untuk ${patientName} telah berhasil disimpan dengan kategori ${calculatedRisk}. Tahap 2 (Skrining HPP) kini telah terbuka.`,
+          `Skrining Risiko PE untuk ${patientName} telah berhasil disimpan dengan kategori ${riskLabelIndo}. Tahap 2 (Skrining HPP) kini telah terbuka.`,
           "success"
         );
       } else {
-        const msg = `Hasil Skrining Risiko HPP berhasil disimpan ke Rekam Medis! Status risiko diperbarui: ${calculatedRisk}.`;
+        const msg = `Hasil Skrining Risiko HPP berhasil disimpan ke Rekam Medis! Status risiko diperbarui: ${riskLabelIndo}.`;
         setSuccessMessage(msg);
         showToast(
           "Rekam Medis Berhasil Disimpan!",
-          `Skrining Risiko HPP untuk ${patientName} berhasil dievaluasi dan diperbarui ke kategori ${calculatedRisk}.`,
+          `Skrining Risiko HPP untuk ${patientName} berhasil dievaluasi dan diperbarui ke kategori ${riskLabelIndo}.`,
           "success"
         );
       }
@@ -1670,6 +1686,11 @@ export function UnifiedClinicalScreeningView({
                     <Lock className="h-3 w-3" />
                     Terkunci
                   </span>
+                ) : isHppScreeningCompleted ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-300">
+                    <Check className="h-3 w-3 text-emerald-600 stroke-[3]" />
+                    Selesai
+                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-300">
                     <Unlock className="h-3 w-3 text-emerald-600" />
@@ -1700,28 +1721,73 @@ export function UnifiedClinicalScreeningView({
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-950 dark:text-emerald-200">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-6 w-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="h-4 w-4" />
+              <div className="space-y-2.5">
+                {/* 1. Notif Skrining Risiko PE Selesai */}
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-950 dark:text-emerald-200">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-6 w-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="font-black text-emerald-900 dark:text-emerald-100">
+                        Skrining Risiko PE Selesai (Kategori:{" "}
+                        {currentAdmission?.latest_pe_result?.category === "HIGH"
+                          ? "TINGGI"
+                          : currentAdmission?.latest_pe_result?.category === "MODERATE"
+                          ? "SEDANG"
+                          : "RENDAH"}
+                        )
+                      </span>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                        {!isHppScreeningCompleted
+                          ? "Skrining Risiko HPP telah terbuka dan siap diisi."
+                          : "Skrining Tahap 1 (Preeklamsia) telah selesai dievaluasi."}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-black text-emerald-900 dark:text-emerald-100">
-                      Skrining Risiko PE Selesai (Kategori: {currentAdmission?.latest_pe_result?.category || "TEREVALUASI"})
-                    </span>
-                    <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-                      Skrining Risiko HPP telah terbuka dan siap diisi.
-                    </p>
-                  </div>
+                  {activeInstrument === "PE" && !isHppScreeningCompleted && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveInstrument("HPP")}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition-all shrink-0 active:scale-95 cursor-pointer"
+                    >
+                      <span>Lanjut ke Skrining Risiko HPP &rarr;</span>
+                    </button>
+                  )}
                 </div>
-                {activeInstrument === "PE" && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveInstrument("HPP")}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition-all shrink-0 active:scale-95"
-                  >
-                    <span>Lanjut ke Skrining Risiko HPP &rarr;</span>
-                  </button>
+
+                {/* 2. Notif Skrining Risiko HPP Selesai (Tepat di Bawah Notif PE) */}
+                {isHppScreeningCompleted && (
+                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-950 dark:text-emerald-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-6 w-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="font-black text-emerald-900 dark:text-emerald-100">
+                          Skrining Risiko HPP Selesai (Kategori:{" "}
+                          {currentAdmission?.latest_hpp_result?.category === "HIGH"
+                            ? "TINGGI"
+                            : currentAdmission?.latest_hpp_result?.category === "MODERATE"
+                            ? "SEDANG"
+                            : "RENDAH"}
+                          )
+                        </span>
+                        <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                          Seluruh tahapan skrining admisi (PE &amp; HPP) telah selesai dievaluasi dan tersimpan di Rekam Medis.
+                        </p>
+                      </div>
+                    </div>
+                    {onNavigateRpp && (
+                      <button
+                        type="button"
+                        onClick={onNavigateRpp}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-xs transition-all shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        <span>Buka Menu RPP &rarr;</span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
