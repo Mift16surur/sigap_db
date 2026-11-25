@@ -1804,7 +1804,7 @@ export function UnifiedClinicalScreeningView({
                 1
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                Pengkajian Faktor Risiko ({activeInstrument === "HPP" ? "Pedoman RISE / 4T" : "Pedoman POGI & InaSH (Preeklamsia)"})
+                {activeInstrument === "HPP" ? "Skrining Risiko HPP" : "Skrining Risiko Preeklamsia"}
               </h3>
             </div>
           </div>
