@@ -583,7 +583,9 @@ export interface ActionChecklistMaster {
   pathway: "PE" | "HPP";
   risk_category: RiskCategory;
   label: string;
+  description?: string;
   responsible_role: "BIDAN_PERAWAT" | "DOKTER" | "TIM_PONEK";
+  sort_order?: number;
   active_status: boolean;
 }
 
@@ -841,6 +843,220 @@ export const DEFAULT_CLINICAL_SCREENING_CRITERIA: ClinicalScreeningCriterionMast
     category_note: "Kaidah Komplikasi Berat Ganda",
     active_status: true,
     sort_order: 23,
+  },
+];
+
+export const DEFAULT_ACTION_CHECKLIST_MASTERS: ActionChecklistMaster[] = [
+  // ===================== PREEKLAMSIA (PE) =====================
+  // 1. PE LOW (2 butir)
+  {
+    checklist_id: "chk-pe-l1",
+    code: "PE_LOW_VITAL_SIGNS",
+    pathway: "PE",
+    risk_category: "LOW",
+    label: "Pemantauan Tanda Vital & Kemajuan Persalinan Rutin",
+    description: "Pemantauan tanda vital dan kemajuan persalinan rutin sesuai protokol standar.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 1,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-pe-l2",
+    code: "PE_LOW_RESCREEN",
+    pathway: "PE",
+    risk_category: "LOW",
+    label: "Skrining Ulang Berkala Bila Muncul Keluhan Baru",
+    description: "Lakukan skrining ulang segera apabila muncul keluhan baru atau peningkatan tekanan darah selama perawatan.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 2,
+    active_status: true,
+  },
+
+  // 2. PE MODERATE (3 butir)
+  {
+    checklist_id: "chk-pe-m1",
+    code: "PE_MOD_REST_BP_RECHECK",
+    pathway: "PE",
+    risk_category: "MODERATE",
+    label: "Istirahatkan Ibu & Evaluasi Pengukuran TD Ulang (>= 15 Menit)",
+    description: "Istirahatkan ibu dan ulangi pengukuran tekanan darah terstandar setelah >= 15 menit (atau evaluasi dalam 4 jam untuk konfirmasi diagnosis).",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 1,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-pe-m2",
+    code: "PE_MOD_URINE_LAB",
+    pathway: "PE",
+    risk_category: "MODERATE",
+    label: "Pemeriksaan Protein Urin & Panel Laboratorium Dasar",
+    description: "Periksa protein urin serta panel laboratorium dasar (darah lengkap/trombosit, fungsi hati, kreatinin).",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 2,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-pe-m3",
+    code: "PE_MOD_REPORT_EWS",
+    pathway: "PE",
+    risk_category: "MODERATE",
+    label: "Lapor Bidan / Dokter Jaga & Aktifkan Peringatan Dini HPP",
+    description: "Lapor bidan/dokter jaga, tingkatkan frekuensi pemantauan, dan aktifkan peringatan dini risiko HPP.",
+    responsible_role: "DOKTER",
+    sort_order: 3,
+    active_status: true,
+  },
+
+  // 3. PE HIGH (3 butir)
+  {
+    checklist_id: "chk-pe-h1",
+    code: "PE_HIGH_MGSO4_ANTIHYPERTENSIVE",
+    pathway: "PE",
+    risk_category: "HIGH",
+    label: "Aktivasi Respons Cepat & Timer 30–60 Menit: Lapor Sp.OG (SBAR)",
+    description: "Lapor dokter spesialis (format SBAR), mulai pemberian MgSO4 dan antihipertensi kerja cepat (target TD < 140/90 mmHg, diastolik >= 80 mmHg).",
+    responsible_role: "TIM_PONEK",
+    sort_order: 1,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-pe-h2",
+    code: "PE_HIGH_IV_RESTRICTION_MONITOR",
+    pathway: "PE",
+    risk_category: "HIGH",
+    label: "Pasang Akses IV Restriksi Cairan & Pantau Toksisitas MgSO4",
+    description: "Pasang akses IV dengan pembatasan cairan ketat (cegah edema paru) dan pantau toksisitas MgSO4 (refleks patela, RR >= 16x/menit, urin >= 30 mL/jam).",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 2,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-pe-h3",
+    code: "PE_HIGH_CONTRAINDICATION_ALERT",
+    pathway: "PE",
+    risk_category: "HIGH",
+    label: "Kunci Otomatis HPP Risiko Tinggi: Kontraindikasi Metilergometrin",
+    description: "Munculkan alert merah kontraindikasi mutlak Metilergometrin (ergometrin dilarang keras karena memicu lonjakan tensi fatal dan stroke).",
+    responsible_role: "DOKTER",
+    sort_order: 3,
+    active_status: true,
+  },
+
+  // ===================== PERDARAHAN PASCAPERSALINAN (HPP) =====================
+  // 1. HPP LOW (2 butir)
+  {
+    checklist_id: "chk-hpp-l1",
+    code: "HPP_LOW_ACTIVE_STAGE_3",
+    pathway: "HPP",
+    risk_category: "LOW",
+    label: "Penatalaksanaan Aktif Kala III Rutin (Oksitosin 10 IU IM/IV)",
+    description: "Penatalaksanaan aktif kala III rutin pada semua persalinan dengan Oksitosin 10 IU IM/IV (atau Karbetosin stabil panas 100 ug IM/IV jika rantai dingin tidak terjamin) segera setelah bayi lahir.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 1,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-l2",
+    code: "HPP_LOW_OBJECTIVE_BLOOD_LOSS",
+    pathway: "HPP",
+    risk_category: "LOW",
+    label: "Pengukuran Darah Objektif & Pantau Shock Index",
+    description: "Gunakan pengukuran darah objektif (kain kalibrasi/calibrated drape atau penimbangan kasa) dan pantau Shock Index (HR / TDS) pascapersalinan.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 2,
+    active_status: true,
+  },
+
+  // 2. HPP MODERATE (3 butir)
+  {
+    checklist_id: "chk-hpp-m1",
+    code: "HPP_MOD_LARGE_BORE_IV",
+    pathway: "HPP",
+    risk_category: "MODERATE",
+    label: "Pasang Akses IV Berdiameter Besar (16G–18G) & Cek Lab",
+    description: "Pasang akses IV berdiameter besar (16G–18G), periksa darah lengkap (Hb/trombosit) dan golongan darah.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 1,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-m2",
+    code: "HPP_MOD_BEDSIDE_KIT",
+    pathway: "HPP",
+    risk_category: "MODERATE",
+    label: "Siapkan Uterotonika & Asam Traneksamat 1 g IV (Bedside Kit)",
+    description: "Siapkan uterotonika dan Asam Traneksamat 1 g IV di samping tempat tidur (bedside kit) sebagai kesiagaan.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 2,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-m3",
+    code: "HPP_MOD_CALIBRATED_DRAPE",
+    pathway: "HPP",
+    risk_category: "MODERATE",
+    label: "Wajib Ukur Kehilangan Darah Objektif dengan Kain Kalibrasi",
+    description: "Wajib ukur kehilangan darah secara objektif dengan kain kalibrasi sejak kala III dan informasikan tim jaga.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 3,
+    active_status: true,
+  },
+
+  // 3. HPP HIGH (5 butir)
+  {
+    checklist_id: "chk-hpp-h1",
+    code: "HPP_HIGH_SBAR_CONSULT",
+    pathway: "HPP",
+    risk_category: "HIGH",
+    label: "Konsultasi Dini Sp.OG, Anestesi, & Bank Darah (Format SBAR)",
+    description: "Konsultasi dini dokter spesialis obstetri, anestesi, dan bank darah (format SBAR).",
+    responsible_role: "TIM_PONEK",
+    sort_order: 1,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-h2",
+    code: "HPP_HIGH_TWO_IV_CROSSMATCH",
+    pathway: "HPP",
+    risk_category: "HIGH",
+    label: "Pasang Dua Jalur Akses IV Besar (16G–18G) & Crossmatch",
+    description: "Pasang dua jalur akses IV besar (16G–18G), uji silang (crossmatch), dan siapkan komponen darah.",
+    responsible_role: "BIDAN_PERAWAT",
+    sort_order: 2,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-h3",
+    code: "HPP_HIGH_EMOTIVE_BALLOON",
+    pathway: "HPP",
+    risk_category: "HIGH",
+    label: "Siapkan Paket Tatalaksana E-MOTIVE Lengkap & Tamponade Balon",
+    description: "Siapkan Paket Tatalaksana E-MOTIVE lengkap beserta alat tamponade balon uterus di kamar bersalin agar dapat dijalankan serentak dalam < 15 menit jika perdarahan >= 500 mL atau muncul tanda syok.",
+    responsible_role: "TIM_PONEK",
+    sort_order: 3,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-h4",
+    code: "HPP_HIGH_UTEROTONIC_ALERT",
+    pathway: "HPP",
+    risk_category: "HIGH",
+    label: "Waspada Kontraindikasi Uterotonika",
+    description: "Periksa riwayat tensi: KONTRAINDIKASI MUTLAK METILERGOMETRIN bila hipertensi/preeklamsia. Siapkan Oksitosin, Misoprostol, atau Karbetosin.",
+    responsible_role: "DOKTER",
+    sort_order: 4,
+    active_status: true,
+  },
+  {
+    checklist_id: "chk-hpp-h5",
+    code: "HPP_HIGH_PLANNED_REFERRAL",
+    pathway: "HPP",
+    risk_category: "HIGH",
+    label: "Pertimbangkan Rujukan Terencana ke Fasilitas PONEK Komprehensif",
+    description: "Pertimbangkan rujukan terencana ke fasilitas PONEK komprehensif bila sarana atau komponen darah tidak memadai.",
+    responsible_role: "TIM_PONEK",
+    sort_order: 5,
+    active_status: true,
   },
 ];
 

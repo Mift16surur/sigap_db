@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 import { initialSigapDatabase } from "./seed-data";
 import {
   AuditLog,
+  DEFAULT_ACTION_CHECKLIST_MASTERS,
   DEFAULT_CLINICAL_SCREENING_CRITERIA,
   SigapDatabase,
   User,
@@ -68,6 +69,14 @@ export function getDb(): SigapDatabase {
         ) {
           parsed.master_catalog.clinical_screening_criteria = JSON.parse(
             JSON.stringify(DEFAULT_CLINICAL_SCREENING_CRITERIA)
+          );
+        }
+        if (
+          !Array.isArray(parsed.master_catalog.action_checklist_masters) ||
+          parsed.master_catalog.action_checklist_masters.length < 18
+        ) {
+          parsed.master_catalog.action_checklist_masters = JSON.parse(
+            JSON.stringify(DEFAULT_ACTION_CHECKLIST_MASTERS)
           );
         }
         if (!Array.isArray(parsed.patients)) parsed.patients = [];

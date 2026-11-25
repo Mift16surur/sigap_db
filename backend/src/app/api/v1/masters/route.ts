@@ -6,9 +6,11 @@ import {
   saveDb,
 } from "@/lib/store";
 import {
+  ActionChecklistMaster,
   ChiefComplaintTemplate,
   ClinicalScreeningCriterionMaster,
   ComorbidityTemplate,
+  DEFAULT_ACTION_CHECKLIST_MASTERS,
   DEFAULT_CLINICAL_SCREENING_CRITERIA,
   DoctorMaster,
   HospitalUnit,
@@ -567,6 +569,100 @@ export async function POST(req: Request) {
       ok: true,
       count: criteriaList.length,
       criteria: criteriaList,
+    });
+  }
+
+  // 9. Tambah Master Bundle Tindak Lanjut Klinis (Checklist Kesiapan)
+  if (action === "ADD_ACTION_CHECKLIST_MASTER") {
+    if (!db.master_catalog.action_checklist_masters) {
+      db.master_catalog.action_checklist_masters = [];
+    }
+    const newBundle: ActionChecklistMaster = {
+      checklist_id: body.checklist_id || `chk-${Date.now()}`,
+      code: body.code || `CHK_${body.pathway || "PE"}_${body.risk_category || "MODERATE"}_${Date.now()}`,
+      pathway: body.pathway || "PE",
+      risk_category: body.risk_category || "MODERATE",
+      label: body.label,
+      description: body.description || "",
+      responsible_role: body.responsible_role || "BIDAN_PERAWAT",
+      sort_order: Number(body.sort_order || db.master_catalog.action_checklist_masters.length + 1),
+      active_status: body.active_status !== undefined ? Boolean(body.active_status) : true,
+    };
+    db.master_catalog.action_checklist_masters.push(newBundle);
+
+    appendAuditLog(db, {
+      userId,
+      entity: "action_checklist_masters",
+      entityId: newBundle.checklist_id,
+      action: "CREATE",
+      changeSummary: `Menambahkan Master Bundle [${newBundle.pathway} - ${newBundle.risk_category}]: ${newBundle.label}.`,
+    });
+    saveDb(db);
+    return NextResponse.json({ ok: true, checklist: newBundle });
+  }
+
+  // 9b. Update Master Bundle Tindak Lanjut Klinis
+  if (action === "UPDATE_ACTION_CHECKLIST_MASTER") {
+    if (!db.master_catalog.action_checklist_masters) {
+      db.master_catalog.action_checklist_masters = [];
+    }
+    const bIndex = db.master_catalog.action_checklist_masters.findIndex(
+      (b) => b.checklist_id === body.checklist_id
+    );
+    if (bIndex === -1) {
+      return NextResponse.json({ ok: false, error: "Item bundle tidak ditemukan" }, { status: 404 });
+    }
+    const old = db.master_catalog.action_checklist_masters[bIndex];
+    const updatedBundle: ActionChecklistMaster = {
+      ...old,
+      code: body.code || old.code,
+      pathway: body.pathway || old.pathway,
+      risk_category: body.risk_category || old.risk_category,
+      label: body.label || old.label,
+      description: body.description !== undefined ? body.description : old.description,
+      responsible_role: body.responsible_role || old.responsible_role,
+      sort_order: body.sort_order !== undefined ? Number(body.sort_order) : old.sort_order,
+      active_status: body.active_status !== undefined ? Boolean(body.active_status) : old.active_status,
+    };
+    db.master_catalog.action_checklist_masters[bIndex] = updatedBundle;
+    saveDb(db);
+    return NextResponse.json({ ok: true, checklist: updatedBundle });
+  }
+
+  // 9c. Delete Master Bundle Tindak Lanjut Klinis
+  if (action === "DELETE_ACTION_CHECKLIST_MASTER") {
+    if (!db.master_catalog.action_checklist_masters) {
+      db.master_catalog.action_checklist_masters = [];
+    }
+    const bIndex = db.master_catalog.action_checklist_masters.findIndex(
+      (b) => b.checklist_id === body.checklist_id
+    );
+    if (bIndex === -1) {
+      return NextResponse.json({ ok: false, error: "Item bundle tidak ditemukan" }, { status: 404 });
+    }
+    const deleted = db.master_catalog.action_checklist_masters.splice(bIndex, 1)[0];
+    saveDb(db);
+    return NextResponse.json({ ok: true, deleted_id: deleted.checklist_id });
+  }
+
+  // 9d. Seed / Reset Master Bundle Tindak Lanjut Standar (18 Butir)
+  if (action === "SEED_ACTION_CHECKLIST_MASTERS") {
+    db.master_catalog.action_checklist_masters = JSON.parse(
+      JSON.stringify(DEFAULT_ACTION_CHECKLIST_MASTERS)
+    );
+    appendAuditLog(db, {
+      userId,
+      entity: "action_checklist_masters",
+      entityId: "seed-18-bundles",
+      action: "CREATE",
+      changeSummary: "Menyinkronkan 18 item bundle tindak lanjut standar ke Master Data.",
+    });
+    saveDb(db);
+    const bundles = db.master_catalog.action_checklist_masters || [];
+    return NextResponse.json({
+      ok: true,
+      count: bundles.length,
+      checklists: bundles,
     });
   }
 

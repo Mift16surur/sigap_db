@@ -25,10 +25,13 @@ import {
   Search,
   Power,
   RefreshCw,
+  CheckSquare,
 } from "lucide-react";
 import { apiRequest, BootstrapResponse } from "@/lib/api-client";
 import {
+  DEFAULT_ACTION_CHECKLIST_MASTERS,
   DEFAULT_CLINICAL_SCREENING_CRITERIA,
+  type ActionChecklistMaster,
   type ClinicalScreeningCriterionMaster,
   type DoctorMaster,
   type Domain4T,
@@ -41,6 +44,7 @@ import {
 
 type MasterTab =
   | "SCREENING_CRITERIA"
+  | "ACTION_BUNDLES"
   | "DOCTORS"
   | "MIDWIVES_NURSES"
   | "UNITS_REFERRALS"
@@ -65,6 +69,13 @@ export function MasterDataView({
   const allCriteria: ClinicalScreeningCriterionMaster[] = !isCloudCriteriaEmpty
     ? catalog.clinical_screening_criteria!
     : DEFAULT_CLINICAL_SCREENING_CRITERIA;
+
+  const isCloudBundlesEmpty =
+    !catalog.action_checklist_masters || catalog.action_checklist_masters.length === 0;
+
+  const allBundles: ActionChecklistMaster[] = !isCloudBundlesEmpty
+    ? catalog.action_checklist_masters!
+    : DEFAULT_ACTION_CHECKLIST_MASTERS;
 
   const [tab, setTab] = useState<MasterTab>("SCREENING_CRITERIA");
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -174,6 +185,24 @@ export function MasterDataView({
   const [editingCrit, setEditingCrit] = useState<ClinicalScreeningCriterionMaster | null>(null);
   const [deletingCrit, setDeletingCrit] = useState<ClinicalScreeningCriterionMaster | null>(null);
 
+  // State Form Master Bundle Tindak Lanjut Klinis (Checklist Kesiapan)
+  const [bundlePathway, setBundlePathway] = useState<"PE" | "HPP">("PE");
+  const [bundleRisk, setBundleRisk] = useState<RiskCategory>("MODERATE");
+  const [bundleLabel, setBundleLabel] = useState<string>("");
+  const [bundleDesc, setBundleDesc] = useState<string>("");
+  const [bundleRole, setBundleRole] = useState<"BIDAN_PERAWAT" | "DOKTER" | "TIM_PONEK">("BIDAN_PERAWAT");
+  const [bundleSortOrder, setBundleSortOrder] = useState<number>(1);
+  const [bundleActiveStatus, setBundleActiveStatus] = useState<boolean>(true);
+
+  // Filter & Search Master Bundle
+  const [bundleFilterPathway, setBundleFilterPathway] = useState<string>("ALL");
+  const [bundleFilterRisk, setBundleFilterRisk] = useState<string>("ALL");
+  const [bundleSearch, setBundleSearch] = useState<string>("");
+
+  // Modal Edit & Delete Bundle
+  const [editingBundle, setEditingBundle] = useState<ActionChecklistMaster | null>(null);
+  const [deletingBundle, setDeletingBundle] = useState<ActionChecklistMaster | null>(null);
+
   async function postMasterAction(body: any, successText: string) {
     setErrorMsg(null);
     setFeedbackMsg(null);
@@ -255,6 +284,71 @@ export function MasterDataView({
         active_status: !crit.active_status,
       },
       `Status kriteria '${crit.label}' diubah menjadi ${!crit.active_status ? "Aktif" : "Non-Aktif"}.`
+    );
+  }
+
+  // Action Handlers for Action Bundles
+  async function handleAddBundle(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bundleLabel.trim()) return;
+    await postMasterAction(
+      {
+        action: "ADD_ACTION_CHECKLIST_MASTER",
+        pathway: bundlePathway,
+        risk_category: bundleRisk,
+        label: bundleLabel.trim(),
+        description: bundleDesc.trim(),
+        responsible_role: bundleRole,
+        sort_order: Number(bundleSortOrder) || (catalog.action_checklist_masters?.length || 0) + 1,
+        active_status: bundleActiveStatus,
+      },
+      `Bundle tindak lanjut '${bundleLabel}' berhasil ditambahkan ke Master Data.`
+    );
+    setBundleLabel("");
+    setBundleDesc("");
+    setBundleSortOrder((catalog.action_checklist_masters?.length || 0) + 2);
+  }
+
+  async function handleUpdateBundle(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingBundle) return;
+    await postMasterAction(
+      {
+        action: "UPDATE_ACTION_CHECKLIST_MASTER",
+        checklist_id: editingBundle.checklist_id,
+        pathway: editingBundle.pathway,
+        risk_category: editingBundle.risk_category,
+        label: editingBundle.label,
+        description: editingBundle.description,
+        responsible_role: editingBundle.responsible_role,
+        sort_order: Number(editingBundle.sort_order),
+        active_status: editingBundle.active_status,
+      },
+      `Bundle tindak lanjut '${editingBundle.label}' berhasil diperbarui.`
+    );
+    setEditingBundle(null);
+  }
+
+  async function handleDeleteBundle() {
+    if (!deletingBundle) return;
+    await postMasterAction(
+      {
+        action: "DELETE_ACTION_CHECKLIST_MASTER",
+        checklist_id: deletingBundle.checklist_id,
+      },
+      `Bundle tindak lanjut '${deletingBundle.label}' berhasil dihapus dari Master Data.`
+    );
+    setDeletingBundle(null);
+  }
+
+  async function handleToggleBundleStatus(b: ActionChecklistMaster) {
+    await postMasterAction(
+      {
+        action: "UPDATE_ACTION_CHECKLIST_MASTER",
+        checklist_id: b.checklist_id,
+        active_status: !b.active_status,
+      },
+      `Status bundle '${b.label}' diubah menjadi ${!b.active_status ? "Aktif" : "Non-Aktif"}.`
     );
   }
 
@@ -413,13 +507,15 @@ export function MasterDataView({
               <div className="text-xs font-black text-slate-900 dark:text-slate-100">
                 {catalog.doctors.length +
                   catalog.midwives_nurses.length +
+                  allCriteria.length +
+                  allBundles.length +
                   db.units.length +
                   catalog.referral_facilities.length +
                   db.risk_factors.length}{" "}
                 Variabel
               </div>
               <div className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
-                5 Kategori Master Terhubung
+                7 Kategori Master Terhubung
               </div>
             </div>
           </div>
@@ -436,32 +532,38 @@ export function MasterDataView({
             icon: ShieldAlert,
           },
           {
-            id: "DOCTORS",
+            id: "ACTION_BUNDLES",
             step: "2",
+            label: `Master Bundle Tindak Lanjut (${allBundles.length})`,
+            icon: CheckSquare,
+          },
+          {
+            id: "DOCTORS",
+            step: "3",
             label: `Master Dokter DPJP (${catalog.doctors.length})`,
             icon: Stethoscope,
           },
           {
             id: "MIDWIVES_NURSES",
-            step: "3",
+            step: "4",
             label: `Master Bidan & Perawat (${catalog.midwives_nurses.length})`,
             icon: UserCheck,
           },
           {
             id: "UNITS_REFERRALS",
-            step: "4",
+            step: "5",
             label: `Master Unit & Asal Rujukan (${db.units.length + catalog.referral_facilities.length})`,
             icon: Building2,
           },
           {
             id: "COMPLAINTS_COMORBIDS",
-            step: "5",
+            step: "6",
             label: `Master Template Keluhan & Komorbid (${catalog.chief_complaints.length + catalog.comorbidity_templates.length})`,
             icon: ClipboardList,
           },
           {
             id: "RISK_FACTORS_LABS",
-            step: "6",
+            step: "7",
             label: `Master Faktor Risiko Legacy (${db.risk_factors.length})`,
             icon: TestTube,
           },
@@ -898,6 +1000,397 @@ export function MasterDataView({
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: MASTER BUNDLE TINDAK LANJUT KLINIS (CHECKLIST KESIAPAN SOP) */}
+      {tab === "ACTION_BUNDLES" && (
+        <div className="space-y-6">
+          {/* Header & Statistik Bundle */}
+          <div className="rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/70 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 p-5 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <span>Pusat Data Master Bundle Tindak Lanjut Klinis (Checklist Kesiapan)</span>
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Kelola paket kesiagaan dan respons klinis (PE & HPP) per tingkat risiko (Rendah, Sedang, Tinggi) yang otomatis muncul pada lembar skrining admisi.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-mono text-xs font-black shadow-xs">
+                  {allBundles.length} Tindakan Terdaftar
+                </span>
+              </div>
+            </div>
+
+            {/* Banner Sinkronisasi Server Jika Data Cloud Masih Kosong */}
+            {isCloudBundlesEmpty && (
+              <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>
+                    <strong>Database Server Cloud Belum Terisi:</strong> Menampilkan 18 item bundle standar SOP & Proposal SIGAP. Klik tombol di kanan untuk menyinkronkan data ini ke database server cloud Anda.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    postMasterAction(
+                      { action: "SEED_ACTION_CHECKLIST_MASTERS" },
+                      "18 Item Bundle Tindak Lanjut berhasil disinkronkan ke database server cloud!"
+                    )
+                  }
+                  disabled={submitting}
+                  className="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer ml-auto"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Sinkronkan 18 Bundle ke Server</span>
+                </button>
+              </div>
+            )}
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1 text-xs font-bold">
+              <div className="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-2 text-center">
+                <div className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase">PE Rendah</div>
+                <div className="text-sm font-black text-emerald-900 dark:text-emerald-100">
+                  {allBundles.filter((b) => b.pathway === "PE" && b.risk_category === "LOW").length} Butir
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/40 p-2 text-center">
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 uppercase">PE Sedang</div>
+                <div className="text-sm font-black text-amber-900 dark:text-amber-100">
+                  {allBundles.filter((b) => b.pathway === "PE" && b.risk_category === "MODERATE").length} Butir
+                </div>
+              </div>
+              <div className="rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-950/40 p-2 text-center">
+                <div className="text-[10px] text-rose-700 dark:text-rose-300 uppercase">PE Tinggi</div>
+                <div className="text-sm font-black text-rose-900 dark:text-rose-100">
+                  {allBundles.filter((b) => b.pathway === "PE" && b.risk_category === "HIGH").length} Butir
+                </div>
+              </div>
+              <div className="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-2 text-center">
+                <div className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase">HPP Rendah</div>
+                <div className="text-sm font-black text-emerald-900 dark:text-emerald-100">
+                  {allBundles.filter((b) => b.pathway === "HPP" && b.risk_category === "LOW").length} Butir
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/40 p-2 text-center">
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 uppercase">HPP Sedang</div>
+                <div className="text-sm font-black text-amber-900 dark:text-amber-100">
+                  {allBundles.filter((b) => b.pathway === "HPP" && b.risk_category === "MODERATE").length} Butir
+                </div>
+              </div>
+              <div className="rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-950/40 p-2 text-center">
+                <div className="text-[10px] text-rose-700 dark:text-rose-300 uppercase">HPP Tinggi</div>
+                <div className="text-sm font-black text-rose-900 dark:text-rose-100">
+                  {allBundles.filter((b) => b.pathway === "HPP" && b.risk_category === "HIGH").length} Butir
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-4 lg:col-span-1 rounded-xl border border-blue-300 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 p-2 text-center">
+                <div className="text-[10px] text-blue-700 dark:text-blue-300 uppercase">Status Aktif</div>
+                <div className="text-sm font-black text-blue-900 dark:text-blue-100">
+                  {allBundles.filter((b) => b.active_status).length} / {allBundles.length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Form Tambah Bundle Baru (Kiri, 4 Kolom) */}
+            <form
+              onSubmit={handleAddBundle}
+              className="lg:col-span-4 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3.5 text-xs h-fit"
+            >
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-blue-100 dark:border-blue-900/60 pb-3">
+                <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span>Tambah Bundle Tindakan Baru</span>
+              </h3>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      1. Jalur Skrining *
+                    </label>
+                    <select
+                      value={bundlePathway}
+                      onChange={(e) => setBundlePathway(e.target.value as "PE" | "HPP")}
+                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="PE">Preeklamsia (PE)</option>
+                      <option value="HPP">Perdarahan (HPP)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      2. Tingkat Risiko *
+                    </label>
+                    <select
+                      value={bundleRisk}
+                      onChange={(e) => setBundleRisk(e.target.value as RiskCategory)}
+                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="LOW">Rendah (Hijau)</option>
+                      <option value="MODERATE">Sedang (Kuning)</option>
+                      <option value="HIGH">Tinggi / Berat (Merah)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    3. Peran Penanggung Jawab *
+                  </label>
+                  <select
+                    value={bundleRole}
+                    onChange={(e) => setBundleRole(e.target.value as "BIDAN_PERAWAT" | "DOKTER" | "TIM_PONEK")}
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="BIDAN_PERAWAT">Bidan / Perawat Obstetri</option>
+                    <option value="DOKTER">Dokter Jaga / DPJP Sp.OG</option>
+                    <option value="TIM_PONEK">Tim Multidisiplin PONEK</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    4. Judul Tindakan Klinis *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Pasang Akses IV Berdiameter Besar (16G–18G)"
+                    value={bundleLabel}
+                    onChange={(e) => setBundleLabel(e.target.value)}
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    5. Deskripsi SOP / Dosis / Alat
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Instruksi SOP rinci (misal: Pasang 2 jalur IV, periksa darah lengkap & crossmatch)..."
+                    value={bundleDesc}
+                    onChange={(e) => setBundleDesc(e.target.value)}
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    6. Urutan Tampil
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={bundleSortOrder}
+                    onChange={(e) => setBundleSortOrder(Number(e.target.value))}
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="bundleActiveStatus"
+                    checked={bundleActiveStatus}
+                    onChange={(e) => setBundleActiveStatus(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <label
+                    htmlFor="bundleActiveStatus"
+                    className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                  >
+                    Aktifkan langsung di lembar skrining pasien
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Menyimpan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    <span>+ Simpan Bundle Tindakan</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Tabel Daftar Bundle (Kanan, 8 Kolom) */}
+            <div className="lg:col-span-8 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 dark:border-blue-900/60 pb-3">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Cari judul tindakan atau deskripsi SOP..."
+                    value={bundleSearch}
+                    onChange={(e) => setBundleSearch(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={bundleFilterPathway}
+                    onChange={(e) => setBundleFilterPathway(e.target.value)}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="ALL">Semua Jalur</option>
+                    <option value="PE">Khusus PE</option>
+                    <option value="HPP">Khusus HPP</option>
+                  </select>
+
+                  <select
+                    value={bundleFilterRisk}
+                    onChange={(e) => setBundleFilterRisk(e.target.value)}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="ALL">Semua Risiko</option>
+                    <option value="LOW">Rendah (Hijau)</option>
+                    <option value="MODERATE">Sedang (Kuning)</option>
+                    <option value="HIGH">Tinggi (Merah)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tabel Items */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-black text-slate-500 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-800/60">
+                      <th className="py-2.5 px-3 w-10 text-center">No</th>
+                      <th className="py-2.5 px-3">Tindakan Klinis & SOP</th>
+                      <th className="py-2.5 px-2.5 text-center">Jalur</th>
+                      <th className="py-2.5 px-2.5 text-center">Risiko</th>
+                      <th className="py-2.5 px-2.5 text-center">PJ</th>
+                      <th className="py-2.5 px-2.5 text-center">Status</th>
+                      <th className="py-2.5 px-3 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {allBundles
+                      .filter((b) => {
+                        const matchPathway = bundleFilterPathway === "ALL" || b.pathway === bundleFilterPathway;
+                        const matchRisk = bundleFilterRisk === "ALL" || b.risk_category === bundleFilterRisk;
+                        const matchSearch =
+                          !bundleSearch.trim() ||
+                          b.label.toLowerCase().includes(bundleSearch.toLowerCase()) ||
+                          (b.description && b.description.toLowerCase().includes(bundleSearch.toLowerCase()));
+                        return matchPathway && matchRisk && matchSearch;
+                      })
+                      .map((b, idx) => {
+                        const riskBadge =
+                          b.risk_category === "HIGH"
+                            ? "bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-200 border-rose-300"
+                            : b.risk_category === "MODERATE"
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-200 border-amber-300"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 border-emerald-300";
+
+                        return (
+                          <tr
+                            key={b.checklist_id}
+                            className={`hover:bg-blue-50/40 dark:hover:bg-slate-800/40 transition-colors ${
+                              !b.active_status ? "opacity-60 bg-slate-50/50 dark:bg-slate-900/50" : ""
+                            }`}
+                          >
+                            <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-500">
+                              {idx + 1}
+                            </td>
+                            <td className="py-2.5 px-3 max-w-sm">
+                              <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                                {b.label}
+                              </div>
+                              {b.description && (
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                                  {b.description}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-2.5 text-center">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                                  b.pathway === "PE"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300"
+                                    : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300"
+                                }`}
+                              >
+                                {b.pathway}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2.5 text-center">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${riskBadge}`}
+                              >
+                                {b.risk_category}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2.5 text-center">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                {b.responsible_role === "BIDAN_PERAWAT"
+                                  ? "Bidan/Perawat"
+                                  : b.responsible_role === "DOKTER"
+                                  ? "Dokter"
+                                  : "Tim PONEK"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBundleStatus(b)}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black cursor-pointer transition-all ${
+                                  b.active_status
+                                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                                }`}
+                              >
+                                <Power className="h-3 w-3" />
+                                <span>{b.active_status ? "Aktif" : "Nonaktif"}</span>
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingBundle(b)}
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                  title="Edit Bundle"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingBundle(b)}
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-red-600 hover:bg-red-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                  title="Hapus Bundle"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -2890,6 +3383,237 @@ export function MasterDataView({
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shadow-red-500/20"
               >
                 {submitting ? "Menghapus..." : "Ya, Hapus Kriteria"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 11: EDIT MASTER BUNDLE TINDAK LANJUT KLINIS              */}
+      {/* ============================================================== */}
+      {editingBundle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#131f37] rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                  <CheckSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Edit Bundle Tindak Lanjut Klinis
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    ID: {editingBundle.checklist_id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBundle(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBundle} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Jalur Skrining
+                  </label>
+                  <select
+                    value={editingBundle.pathway}
+                    onChange={(e) =>
+                      setEditingBundle({
+                        ...editingBundle,
+                        pathway: e.target.value as "PE" | "HPP",
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-semibold focus:border-[#2563eb] outline-none"
+                  >
+                    <option value="PE">Preeklamsia (PE)</option>
+                    <option value="HPP">Perdarahan (HPP)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Tingkat Risiko
+                  </label>
+                  <select
+                    value={editingBundle.risk_category}
+                    onChange={(e) =>
+                      setEditingBundle({
+                        ...editingBundle,
+                        risk_category: e.target.value as RiskCategory,
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-semibold focus:border-[#2563eb] outline-none"
+                  >
+                    <option value="LOW">Rendah (Hijau)</option>
+                    <option value="MODERATE">Sedang (Kuning)</option>
+                    <option value="HIGH">Tinggi / Berat (Merah)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Peran Penanggung Jawab
+                </label>
+                <select
+                  value={editingBundle.responsible_role}
+                  onChange={(e) =>
+                    setEditingBundle({
+                      ...editingBundle,
+                      responsible_role: e.target.value as "BIDAN_PERAWAT" | "DOKTER" | "TIM_PONEK",
+                    })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-semibold focus:border-[#2563eb] outline-none"
+                >
+                  <option value="BIDAN_PERAWAT">Bidan / Perawat Obstetri</option>
+                  <option value="DOKTER">Dokter Jaga / DPJP Sp.OG</option>
+                  <option value="TIM_PONEK">Tim Multidisiplin PONEK</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Judul Tindakan Klinis
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingBundle.label}
+                  onChange={(e) =>
+                    setEditingBundle({
+                      ...editingBundle,
+                      label: e.target.value,
+                    })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Deskripsi SOP / Dosis / Alat
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingBundle.description || ""}
+                  onChange={(e) =>
+                    setEditingBundle({
+                      ...editingBundle,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Urutan Tampil
+                  </label>
+                  <input
+                    type="number"
+                    value={editingBundle.sort_order || 1}
+                    onChange={(e) =>
+                      setEditingBundle({
+                        ...editingBundle,
+                        sort_order: Number(e.target.value),
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono focus:border-[#2563eb] outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-4">
+                  <input
+                    type="checkbox"
+                    id="editBundleActive"
+                    checked={editingBundle.active_status}
+                    onChange={(e) =>
+                      setEditingBundle({
+                        ...editingBundle,
+                        active_status: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <label htmlFor="editBundleActive" className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    Aktif di formulir skrining
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingBundle(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md shadow-blue-500/20"
+                >
+                  {submitting ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 12: HAPUS MASTER BUNDLE TINDAK LANJUT KLINIS             */}
+      {/* ============================================================== */}
+      {deletingBundle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#131f37] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Hapus Bundle Tindak Lanjut
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Konfirmasi penghapusan item bundle master
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Apakah Anda yakin ingin menghapus item bundle:
+              <br />
+              <strong className="text-slate-900 dark:text-white block mt-1.5 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                &ldquo;{deletingBundle.label}&rdquo; ({deletingBundle.pathway} - {deletingBundle.risk_category})
+              </strong>
+            </p>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeletingBundle(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleDeleteBundle}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shadow-red-500/20"
+              >
+                {submitting ? "Menghapus..." : "Ya, Hapus Bundle"}
               </button>
             </div>
           </div>

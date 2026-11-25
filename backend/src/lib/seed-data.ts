@@ -2,7 +2,7 @@
  * SIGAP — Data Awal (Seed Data) Lengkap untuk 18 Entitas & Skenario Evaluasi Bab 14
  */
 
-import { SigapDatabase } from "./types";
+import { DEFAULT_ACTION_CHECKLIST_MASTERS, SigapDatabase } from "./types";
 
 export const initialSigapDatabase: SigapDatabase = {
   system_settings: {
@@ -112,48 +112,7 @@ export const initialSigapDatabase: SigapDatabase = {
         active_status: true,
       },
     ],
-    action_checklist_masters: [
-      {
-        checklist_id: "chk-pe-01",
-        code: "PE_HIGH_SBAR",
-        pathway: "PE",
-        risk_category: "HIGH",
-        label:
-          "Lapor segera DPJP Sp.OG / Tim PONEK menggunakan kerangka komunikasi SBAR",
-        responsible_role: "BIDAN_PERAWAT",
-        active_status: true,
-      },
-      {
-        checklist_id: "chk-pe-02",
-        code: "PE_HIGH_BOX",
-        pathway: "PE",
-        risk_category: "HIGH",
-        label:
-          "Siagakan Kotak Emergensi Preeklamsia/Eklamsia (MgSO4, Ca Glukonas, Antihipertensi sesuai SOP RS)",
-        responsible_role: "TIM_PONEK",
-        active_status: true,
-      },
-      {
-        checklist_id: "chk-hpp-01",
-        code: "HPP_HIGH_TEAM",
-        pathway: "HPP",
-        risk_category: "HIGH",
-        label:
-          "Aktifkan kesiapan Tim Multidisiplin PONEK (Sp.OG, Anestesi, Bidan Senior, Bank Darah)",
-        responsible_role: "TIM_PONEK",
-        active_status: true,
-      },
-      {
-        checklist_id: "chk-hpp-02",
-        code: "HPP_HIGH_IV_CROSSMATCH",
-        pathway: "HPP",
-        risk_category: "HIGH",
-        label:
-          "Pasang 2 jalur akses IV kaliber besar (16G/18G) & ambil sampel Darah Lengkap, Koagulasi, Crossmatch",
-        responsible_role: "BIDAN_PERAWAT",
-        active_status: true,
-      },
-    ],
+    action_checklist_masters: DEFAULT_ACTION_CHECKLIST_MASTERS,
     address_districts: [],
     emergency_relations: [],
   },

@@ -36,7 +36,10 @@ import {
   AlertOctagon,
 } from "lucide-react";
 import { apiRequest, EnrichedAdmission } from "@/services/api-client";
-import { DEFAULT_CLINICAL_SCREENING_CRITERIA } from "@/types";
+import {
+  DEFAULT_ACTION_CHECKLIST_MASTERS,
+  DEFAULT_CLINICAL_SCREENING_CRITERIA,
+} from "@/types";
 import type {
   ClinicalItemResponse,
   ClinicalProtocol,
@@ -761,132 +764,43 @@ export function UnifiedClinicalScreeningView({
     return Object.values(responses).filter((r) => r === "YA").length;
   }, [responses]);
 
-  // Bundle Tindak Lanjut Klinis Persis Sesuai Tabel 3 Dokumen SIGAP
-  // Bundle Tindak Lanjut Klinis Persis Sesuai Template Dokumen SIGAP (Tabel 1 & 2)
-  const bundleItems = useMemo(() => {
-    if (activeInstrument === "HPP") {
-      // 1. KATEGORI RISIKO RENDAH (HIJAU)
-      if (calculatedRisk === "LOW") {
-        return [
-          {
-            id: "hpp-l1",
-            title: "Penatalaksanaan Aktif Kala III Rutin (Oksitosin 10 IU IM/IV)",
-            desc: "Penatalaksanaan aktif kala III rutin pada semua persalinan dengan Oksitosin 10 IU IM/IV (atau Karbetosin stabil panas 100 ug IM/IV jika rantai dingin tidak terjamin) segera setelah bayi lahir.",
-          },
-          {
-            id: "hpp-l2",
-            title: "Pengukuran Darah Objektif & Pantau Shock Index",
-            desc: "Gunakan pengukuran darah objektif (kain kalibrasi/calibrated drape atau penimbangan kasa) dan pantau Shock Index (HR / TDS) pascapersalinan.",
-          },
-        ];
-      }
-      // 2. KATEGORI RISIKO SEDANG (KUNING)
-      if (calculatedRisk === "MODERATE") {
-        return [
-          {
-            id: "hpp-m1",
-            title: "Pasang Akses IV Berdiameter Besar (16G–18G) & Cek Lab",
-            desc: "Pasang akses IV berdiameter besar (16G–18G), periksa darah lengkap (Hb/trombosit) dan golongan darah.",
-          },
-          {
-            id: "hpp-m2",
-            title: "Siapkan Uterotonika & Asam Traneksamat 1 g IV (Bedside Kit)",
-            desc: "Siapkan uterotonika dan Asam Traneksamat 1 g IV di samping tempat tidur (bedside kit) sebagai kesiagaan.",
-          },
-          {
-            id: "hpp-m3",
-            title: "Wajib Ukur Kehilangan Darah Objektif dengan Kain Kalibrasi",
-            desc: "Wajib ukur kehilangan darah secara objektif dengan kain kalibrasi sejak kala III dan informasikan tim jaga.",
-          },
-        ];
-      }
-      // 3. KATEGORI RISIKO TINGGI (MERAH)
-      return [
-        {
-          id: "hpp-h1",
-          title: "Konsultasi Dini Sp.OG, Anestesi, & Bank Darah (Format SBAR)",
-          desc: "Konsultasi dini dokter spesialis obstetri, anestesi, dan bank darah (format SBAR).",
-        },
-        {
-          id: "hpp-h2",
-          title: "Pasang Dua Jalur Akses IV Besar (16G–18G) & Crossmatch",
-          desc: "Pasang dua jalur akses IV besar (16G–18G), uji silang (crossmatch), dan siapkan komponen darah.",
-        },
-        {
-          id: "hpp-h3",
-          title: "Siapkan Paket Tatalaksana E-MOTIVE Lengkap & Tamponade Balon",
-          desc: "Siapkan Paket Tatalaksana E-MOTIVE lengkap beserta alat tamponade balon uterus di kamar bersalin agar dapat dijalankan serentak dalam < 15 menit jika perdarahan >= 500 mL atau muncul tanda syok.",
-        },
-        {
-          id: "hpp-h4",
-          title: "Waspada Kontraindikasi Uterotonika",
-          desc: isPatientPeHigh
-            ? "KONTRAINDIKASI MUTLAK METILERGOMETRIN (pasien hipertensi/preeklamsia). Gunakan Oksitosin / Misoprostol / Karbetosin."
-            : "Siapkan Oksitosin 10-20 IU drip, Karbetosin 100 mcg IM/IV, atau Misoprostol 400-600 mcg.",
-        },
-        {
-          id: "hpp-h5",
-          title: "Pertimbangkan Rujukan Terencana ke Fasilitas PONEK Komprehensif",
-          desc: "Pertimbangkan rujukan terencana ke fasilitas PONEK komprehensif bila sarana atau komponen darah tidak memadai.",
-        },
-      ];
-    } else {
-      // INSTRUMEN PREEKLAMSIA (PE)
-      // 1. KATEGORI RISIKO RENDAH
-      if (calculatedRisk === "LOW") {
-        return [
-          {
-            id: "pe-l1",
-            title: "Pemantauan Tanda Vital & Kemajuan Persalinan Rutin",
-            desc: "Pemantauan tanda vital dan kemajuan persalinan rutin sesuai protokol standar.",
-          },
-          {
-            id: "pe-l2",
-            title: "Skrining Ulang Berkala Bila Muncul Keluhan Baru",
-            desc: "Lakukan skrining ulang segera apabila muncul keluhan baru atau peningkatan tekanan darah selama perawatan.",
-          },
-        ];
-      }
-      // 2. KATEGORI RISIKO SEDANG
-      if (calculatedRisk === "MODERATE") {
-        return [
-          {
-            id: "pe-m1",
-            title: "Istirahatkan Ibu & Evaluasi Pengukuran TD Ulang (>= 15 Menit)",
-            desc: "Istirahatkan ibu dan ulangi pengukuran tekanan darah terstandar setelah >= 15 menit (atau evaluasi dalam 4 jam untuk konfirmasi diagnosis).",
-          },
-          {
-            id: "pe-m2",
-            title: "Pemeriksaan Protein Urin & Panel Laboratorium Dasar",
-            desc: "Periksa protein urin serta panel laboratorium dasar (darah lengkap/trombosit, fungsi hati, kreatinin).",
-          },
-          {
-            id: "pe-m3",
-            title: "Lapor Bidan / Dokter Jaga & Aktifkan Peringatan Dini HPP",
-            desc: "Lapor bidan/dokter jaga, tingkatkan frekuensi pemantauan, dan aktifkan peringatan dini risiko HPP.",
-          },
-        ];
-      }
-      // 3. KATEGORI RISIKO BERAT (TINGGI)
-      return [
-        {
-          id: "pe-h1",
-          title: "Aktivasi Respons Cepat & Timer 30–60 Menit: Lapor Sp.OG (SBAR)",
-          desc: "Lapor dokter spesialis (format SBAR), mulai pemberian MgSO4 dan antihipertensi kerja cepat (target TD < 140/90 mmHg, diastolik >= 80 mmHg).",
-        },
-        {
-          id: "pe-h2",
-          title: "Pasang Akses IV Restriksi Cairan & Pantau Toksisitas MgSO4",
-          desc: "Pasang akses IV dengan pembatasan cairan ketat (cegah edema paru) dan pantau toksisitas MgSO4 (refleks patela, RR >= 16x/menit, urin >= 30 mL/jam).",
-        },
-        {
-          id: "pe-h3",
-          title: "Kunci Otomatis HPP Risiko Tinggi: Kontraindikasi Metilergometrin",
-          desc: "Munculkan alert merah kontraindikasi mutlak Metilergometrin (ergometrin dilarang keras karena memicu lonjakan tensi fatal dan stroke).",
-        },
-      ];
+  // Bundle Tindak Lanjut Klinis Dinamis Berbasis Master Data (Tabel 3 Proposal & SOP SIGAP)
+  const masterBundles = useMemo(() => {
+    const list = db.master_catalog?.action_checklist_masters;
+    if (Array.isArray(list) && list.length > 0) {
+      return list;
     }
-  }, [activeInstrument, calculatedRisk, isPatientPeHigh]);
+    return DEFAULT_ACTION_CHECKLIST_MASTERS;
+  }, [db.master_catalog?.action_checklist_masters]);
+
+  const bundleItems = useMemo(() => {
+    const filtered = masterBundles
+      .filter(
+        (b) =>
+          b.pathway === activeInstrument &&
+          b.risk_category === calculatedRisk &&
+          b.active_status !== false
+      )
+      .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+
+    if (filtered.length > 0) {
+      return filtered.map((b) => {
+        let desc = b.description || b.label;
+        // Penyesuaian cerdas klinis bila terdeteksi tensi tinggi / PE Berat
+        if (b.code === "HPP_HIGH_UTEROTONIC_ALERT" && isPatientPeHigh) {
+          desc = "KONTRAINDIKASI MUTLAK METILERGOMETRIN (pasien hipertensi/preeklamsia). Gunakan Oksitosin / Misoprostol / Karbetosin.";
+        }
+        return {
+          id: b.checklist_id,
+          title: b.label,
+          desc,
+          role: b.responsible_role,
+        };
+      });
+    }
+
+    return [];
+  }, [masterBundles, activeInstrument, calculatedRisk, isPatientPeHigh]);
 
   const executedCount = Object.values(bundleChecked).filter((b) => b.done).length;
 
