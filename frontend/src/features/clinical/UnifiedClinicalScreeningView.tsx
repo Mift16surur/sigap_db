@@ -303,7 +303,7 @@ export function UnifiedClinicalScreeningView({
     if (!currentAdmission) return false;
     return Boolean(
       currentAdmission.latest_pe_result?.category ||
-      (currentAdmission.pe_screening && currentAdmission.pe_screening.status === "COMPLETED")
+      (currentAdmission.pe_screening && (currentAdmission.pe_screening.status === "COMPLETED" || currentAdmission.pe_screening.status === "NEEDS_REVIEW"))
     );
   }, [currentAdmission]);
 
@@ -312,14 +312,18 @@ export function UnifiedClinicalScreeningView({
     if (!currentAdmission) return false;
     return Boolean(
       currentAdmission.latest_hpp_result?.category ||
-      (currentAdmission.hpp_screening && currentAdmission.hpp_screening.status === "COMPLETED")
+      (currentAdmission.hpp_screening && (currentAdmission.hpp_screening.status === "COMPLETED" || currentAdmission.hpp_screening.status === "NEEDS_REVIEW"))
     );
   }, [currentAdmission]);
 
-  // Alur Klinis Wajib: Bila pasien belum menyelesaikan Skrining PE, tab HPP otomatis terkunci dan kembali ke PE
+  // Alur Klinis Wajib: Bila berpindah ke pasien yang belum menyelesaikan Skrining PE, tab HPP otomatis terkunci dan kembali ke PE
+  const prevAdmIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!isPeScreeningCompleted && activeInstrument === "HPP") {
-      setActiveInstrument("PE");
+    if (prevAdmIdRef.current !== selectedAdmId) {
+      prevAdmIdRef.current = selectedAdmId;
+      if (!isPeScreeningCompleted && activeInstrument === "HPP") {
+        setActiveInstrument("PE");
+      }
     }
   }, [selectedAdmId, isPeScreeningCompleted, activeInstrument]);
 
@@ -540,17 +544,70 @@ export function UnifiedClinicalScreeningView({
       (d) => d.admission_id === currentAdmission.admission_id && d.pathway === pathway
     );
 
-    const initMap: Record<string, ClinicalItemResponse> = {};
-    const masters = pathway === "HPP" ? hppMasters : peMasters;
+    const rawCriteriaList =
+      db.master_catalog?.clinical_screening_criteria &&
+      db.master_catalog.clinical_screening_criteria.length > 0
+        ? db.master_catalog.clinical_screening_criteria
+        : DEFAULT_CLINICAL_SCREENING_CRITERIA;
 
+    const relevantCriteria = rawCriteriaList.filter(
+      (c) => c.active_status && (c.pathway === "ALL" || c.pathway === pathway)
+    );
+
+    const initMap: Record<string, ClinicalItemResponse> = {};
+
+    // 1. Inisialisasi butir 4 Domain Kriteria Klinis (Maternal, Obstetri, Janin, Kombinasi Risiko)
+    relevantCriteria.forEach((crit) => {
+      const found = existingDetails.find(
+        (d) =>
+          d.risk_factor_id === crit.criterion_id ||
+          d.risk_factor_code === crit.criterion_id
+      );
+      if (found) {
+        initMap[crit.criterion_id] = found.response;
+      } else {
+        // Cek bawaan riwayat obstetri / maternal jika belum tersimpan di database
+        if (
+          (crit.criterion_id === "obs_mod_prev_sc" || crit.criterion_id === "mat_trauma_prev_sc") &&
+          currentAdmission.obstetric_history.riwayat_sc_jumlah > 0
+        ) {
+          initMap[crit.criterion_id] = "YA";
+        } else if (
+          (crit.criterion_id === "obs_high_prev_pe" || crit.criterion_id === "mat_high_prev_pe") &&
+          currentAdmission.obstetric_history.riwayat_pe_sebelumnya === "YA"
+        ) {
+          initMap[crit.criterion_id] = "YA";
+        } else if (
+          (crit.criterion_id === "mat_high_prev_hpp_bleeding" || crit.criterion_id === "mat_high_prev_hpp") &&
+          currentAdmission.obstetric_history.riwayat_hpp_sebelumnya === "YA"
+        ) {
+          initMap[crit.criterion_id] = "YA";
+        } else if (
+          crit.criterion_id === "mat_high_chronic_htn" &&
+          currentAdmission.obstetric_history.hipertensi_kronis === "YA"
+        ) {
+          initMap[crit.criterion_id] = "YA";
+        } else if (
+          (crit.criterion_id === "obs_mod_grandemulti" || crit.criterion_id === "obs_mod_grandemultipara") &&
+          currentAdmission.obstetric_history.para > 4
+        ) {
+          initMap[crit.criterion_id] = "YA";
+        } else {
+          // Default: tidak
+          initMap[crit.criterion_id] = "TIDAK";
+        }
+      }
+    });
+
+    // 2. Pertahankan kecocokan dengan master risk factors bawaan (peMasters / hppMasters)
+    const masters = pathway === "HPP" ? hppMasters : peMasters;
     masters.forEach((m) => {
       const found = existingDetails.find(
         (d) => d.risk_factor_id === m.risk_factor_id || d.risk_factor_code === m.code
       );
       if (found) {
         initMap[m.risk_factor_id] = found.response;
-      } else {
-        // Cek riwayat obstetri bawaan
+      } else if (!initMap[m.risk_factor_id]) {
         if (m.code === "HPP_ADD_PREV_HPP" && currentAdmission.obstetric_history.riwayat_hpp_sebelumnya === "YA") {
           initMap[m.risk_factor_id] = "YA";
         } else if (m.code === "HPP_TRAUMA_PREV_SC_SURGERY" && currentAdmission.obstetric_history.riwayat_sc_jumlah > 0) {
@@ -568,7 +625,6 @@ export function UnifiedClinicalScreeningView({
         ) {
           initMap[m.risk_factor_id] = "YA";
         } else {
-          // Default: tidak
           initMap[m.risk_factor_id] = "TIDAK";
         }
       }
@@ -902,16 +958,24 @@ export function UnifiedClinicalScreeningView({
     setSuccessMessage(null);
     const startTime = Date.now();
 
+    const rawCriteriaList =
+      db.master_catalog?.clinical_screening_criteria &&
+      db.master_catalog.clinical_screening_criteria.length > 0
+        ? db.master_catalog.clinical_screening_criteria
+        : DEFAULT_CLINICAL_SCREENING_CRITERIA;
+
     try {
       if (activeInstrument === "HPP") {
         const formattedRiskDetails = Object.entries(responses).map(([rfId, val]) => {
-          const m = hppMasters.find((item) => item.risk_factor_id === rfId);
+          const crit = rawCriteriaList.find((c) => c.criterion_id === rfId);
+          const m = hppMasters.find((item) => item.risk_factor_id === rfId || item.code === rfId);
           return {
             risk_factor_id: rfId,
-            risk_factor_code: m?.code || "",
+            risk_factor_code: crit?.criterion_id || m?.code || rfId,
+            domain: (crit?.domain_id || m?.domain_4t || "TAMBAHAN") as Domain4T,
             response: val,
             info_source: "ANAMNESIS_PASIEN" as InfoSource,
-            note: "",
+            note: crit?.label || m?.label || "",
           };
         });
 
@@ -964,13 +1028,15 @@ export function UnifiedClinicalScreeningView({
       } else {
         // PE Screening
         const formattedRiskDetails = Object.entries(responses).map(([rfId, val]) => {
-          const m = peMasters.find((item) => item.risk_factor_id === rfId);
+          const crit = rawCriteriaList.find((c) => c.criterion_id === rfId);
+          const m = peMasters.find((item) => item.risk_factor_id === rfId || item.code === rfId);
           return {
             risk_factor_id: rfId,
-            risk_factor_code: m?.code || "",
+            risk_factor_code: crit?.criterion_id || m?.code || rfId,
+            domain: (crit?.domain_id || m?.domain_4t || "PE_HIGH_RISK") as Domain4T,
             response: val,
             info_source: "ANAMNESIS_PASIEN" as InfoSource,
-            note: "",
+            note: crit?.label || m?.label || "",
           };
         });
 

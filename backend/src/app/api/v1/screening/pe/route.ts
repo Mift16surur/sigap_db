@@ -17,6 +17,7 @@ import {
   LabResult,
   LabTestCode,
   PeSymptomRecord,
+  RiskFactorMaster,
   ScreeningRiskDetail,
 } from "@/lib/types";
 
@@ -218,6 +219,32 @@ export async function POST(req: Request) {
     }
   }
 
+  const allCriteria = (db.master_catalog?.clinical_screening_criteria || []) as Array<{
+    criterion_id: string;
+    domain_id: string;
+    label: string;
+    risk_tier: string;
+    pathway: string;
+    category_note?: string;
+    active_status?: boolean;
+  }>;
+
+  const combinedRiskMasters: RiskFactorMaster[] = [
+    ...db.risk_factors,
+    ...allCriteria.map((c) => ({
+      risk_factor_id: c.criterion_id,
+      code: c.criterion_id,
+      screening_pathway: (c.pathway === "ALL" ? ("PE" as const) : c.pathway) as any,
+      domain_4t: (c.domain_id as any) || "PE_HIGH_RISK",
+      risk_tier: (c.risk_tier as any) || "MODERATE",
+      default_weight: c.risk_tier === "HIGH" ? 2 : 1,
+      label: c.label,
+      definition: c.label,
+      clinical_rationale: c.category_note || "",
+      active_status: c.active_status !== false,
+    })),
+  ];
+
   // Update faktor risiko PE (5-status eksplisit + sumber informasi)
   if (Array.isArray(body.risk_details)) {
     db.screening_risk_details = db.screening_risk_details.filter(
@@ -226,28 +253,33 @@ export async function POST(req: Request) {
     for (const rd of body.risk_details as Array<{
       risk_factor_id: string;
       risk_factor_code: string;
+      domain?: string;
       response: ClinicalItemResponse;
       info_source?: InfoSource;
       note?: string;
     }>) {
-      const master = db.risk_factors.find(
+      const master = combinedRiskMasters.find(
         (m) =>
           m.risk_factor_id === rd.risk_factor_id ||
           m.code === rd.risk_factor_code
       );
-      if (!master) continue;
+      const crit = allCriteria.find(
+        (c) =>
+          c.criterion_id === rd.risk_factor_id ||
+          c.criterion_id === rd.risk_factor_code
+      );
       const newDetail: ScreeningRiskDetail = {
         risk_detail_id: `rd-pe-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         screening_id: peScreening.pe_screening_id,
         admission_id,
         pathway: "PE",
-        risk_factor_id: master.risk_factor_id,
-        risk_factor_code: master.code,
-        domain: master.domain_4t,
+        risk_factor_id: master?.risk_factor_id || crit?.criterion_id || rd.risk_factor_id,
+        risk_factor_code: master?.code || crit?.criterion_id || rd.risk_factor_code || rd.risk_factor_id,
+        domain: (master?.domain_4t || (crit?.domain_id as any) || (rd.domain as any) || "PE_HIGH_RISK") as any,
         response: rd.response,
         info_source: rd.info_source || "ANAMNESIS_PASIEN",
         assessed_at: now,
-        note: rd.note,
+        note: rd.note || master?.label || crit?.label || "",
       };
       db.screening_risk_details.push(newDetail);
     }
@@ -324,7 +356,7 @@ export async function POST(req: Request) {
     symptoms,
     riskDetails,
     labResults,
-    riskFactorMasters: db.risk_factors,
+    riskFactorMasters: combinedRiskMasters,
     protocol: activeProtocol,
     previousResult: previousResults[0],
   });
@@ -342,8 +374,7 @@ export async function POST(req: Request) {
             1000
         )
       );
-  peScreening.status =
-    result.missing_or_unknown_fields.length > 0 ? "NEEDS_REVIEW" : "COMPLETED";
+  peScreening.status = "COMPLETED";
   peScreening.updated_at = now;
 
   // Sinkronisasi Checklist Kesiapan Fasilitas (FR-13)
