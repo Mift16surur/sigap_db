@@ -2222,8 +2222,8 @@ export function UnifiedClinicalScreeningView({
           </div>
         </div>
 
-        {/* 4. Bottom Sticky Footer (Persis Gambar: Reset Isian, Status Risiko, SIMPAN REKAM MEDIS) */}
-        <div className="sticky bottom-4 z-20 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-4 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* 4. Footer Aksi Skrining (Menempel rapi di bawah Bundle SOP Tindakan Nakes) */}
+        <div className="rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <button
             type="button"
             onClick={handleResetForm}
