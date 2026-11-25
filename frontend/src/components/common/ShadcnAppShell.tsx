@@ -391,8 +391,8 @@ export function ShadcnAppShell({
         },
         {
           id: "PATIENT_DISCHARGE_RPP",
-          label: "Ringkasan Pasien",
-          shortLabel: "Ringkasan",
+          label: "Ringkasan Pasien (RingPas)",
+          shortLabel: "RingPas",
           group: "SKRINING & KLINIS",
           icon: FileCheck,
           badge:

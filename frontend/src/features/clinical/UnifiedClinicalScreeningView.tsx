@@ -323,8 +323,8 @@ export function UnifiedClinicalScreeningView({
     }
   }, [selectedAdmId, isPeScreeningCompleted, activeInstrument]);
 
-  // State Panel Samping Riwayat Skrining Pasien (Kolom Kanan)
-  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(true);
+  // State Panel Samping Riwayat Skrining Pasien (Kolom Kanan) - Default Tertutup
+  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [viewingHistoryAdm, setViewingHistoryAdm] = useState<any | null>(null);
 
   // Riwayat Kunjungan / Skrining Pasien Terpilih (Longitudinal History)
@@ -1515,7 +1515,7 @@ export function UnifiedClinicalScreeningView({
                   onClick={onNavigateRpp}
                   className="font-bold underline text-blue-700 dark:text-blue-400 hover:text-blue-900"
                 >
-                  Buka Menu RPP &rarr;
+                  Buka Menu RingPas &rarr;
                 </button>
               )}
               <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900">
@@ -1784,7 +1784,7 @@ export function UnifiedClinicalScreeningView({
                         onClick={onNavigateRpp}
                         className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-xs transition-all shrink-0 active:scale-95 cursor-pointer"
                       >
-                        <span>Buka Menu RPP &rarr;</span>
+                        <span>Buka Menu RingPas &rarr;</span>
                       </button>
                     )}
                   </div>
@@ -2301,7 +2301,7 @@ export function UnifiedClinicalScreeningView({
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs cursor-pointer active:scale-95 transition-all"
             >
               <FileText className="h-4 w-4" />
-              <span>Buka Ringkasan Pasien</span>
+              <span>Buka Menu RingPas</span>
             </button>
           )}
           {onNavigateAdmission && (
@@ -2526,18 +2526,19 @@ export function UnifiedClinicalScreeningView({
           </div>
         </div>
       ) : (
-        /* Tombol Ramping Expand Ketika Panel Kanan Diciutkan */
+        /* Tombol Expand Ketika Panel Kanan Diciutkan */
         <button
           type="button"
           onClick={() => setIsHistoryPanelOpen(true)}
-          className="hidden xl:flex flex-col items-center justify-center py-4 px-2.5 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm hover:bg-blue-50 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold text-xs gap-3 cursor-pointer transition-all shrink-0 sticky top-4"
+          className="flex xl:flex-col items-center justify-center py-2.5 px-4 xl:py-4 xl:px-2.5 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm hover:bg-blue-50 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold text-xs gap-2 xl:gap-3 cursor-pointer transition-all shrink-0 xl:sticky xl:top-4 self-start"
           title="Buka Daftar History Pasien"
         >
-          <ChevronLeft className="h-4 w-4" />
-          <span className="[writing-mode:vertical-lr] rotate-180 text-[10px] font-black tracking-wider uppercase">
+          <ChevronLeft className="h-4 w-4 hidden xl:block" />
+          <History className="h-4 w-4" />
+          <span className="xl:[writing-mode:vertical-lr] xl:rotate-180 text-[11px] xl:text-[10px] font-black tracking-wider uppercase">
             History Pasien ({patientHistoryRecords.length})
           </span>
-          <History className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 xl:hidden" />
         </button>
       )}
 
