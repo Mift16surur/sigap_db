@@ -20,17 +20,25 @@ import {
   X,
   Loader2,
   Check,
+  ShieldAlert,
+  Filter,
+  Search,
+  Power,
 } from "lucide-react";
 import { apiRequest, BootstrapResponse } from "@/lib/api-client";
 import type {
+  ClinicalScreeningCriterionMaster,
   DoctorMaster,
   Domain4T,
   HospitalUnit,
   MidwifeNurseMaster,
   ReferralFacilityMaster,
+  RiskCategory,
+  ScreeningDomainId,
 } from "@/lib/types";
 
 type MasterTab =
+  | "SCREENING_CRITERIA"
   | "DOCTORS"
   | "MIDWIVES_NURSES"
   | "UNITS_REFERRALS"
@@ -49,7 +57,7 @@ export function MasterDataView({
   const { db } = data;
   const catalog = db.master_catalog;
 
-  const [tab, setTab] = useState<MasterTab>("DOCTORS");
+  const [tab, setTab] = useState<MasterTab>("SCREENING_CRITERIA");
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -138,6 +146,25 @@ export function MasterDataView({
   const [rfLabel, setRfLabel] = useState<string>("");
   const [rfDef, setRfDef] = useState<string>("");
 
+  // State Form Master Kriteria Skrining Klinis (4 Domain)
+  const [critDomain, setCritDomain] = useState<ScreeningDomainId>("DOMAIN_MATERNAL");
+  const [critLabel, setCritLabel] = useState<string>("");
+  const [critRiskTier, setCritRiskTier] = useState<RiskCategory>("MODERATE");
+  const [critPathway, setCritPathway] = useState<"ALL" | "PE" | "HPP">("ALL");
+  const [critCategoryNote, setCritCategoryNote] = useState<string>("");
+  const [critSortOrder, setCritSortOrder] = useState<number>(1);
+  const [critActiveStatus, setCritActiveStatus] = useState<boolean>(true);
+
+  // Filter & Search Master Kriteria
+  const [critFilterDomain, setCritFilterDomain] = useState<string>("ALL");
+  const [critFilterTier, setCritFilterTier] = useState<string>("ALL");
+  const [critFilterPathway, setCritFilterPathway] = useState<string>("ALL");
+  const [critSearch, setCritSearch] = useState<string>("");
+
+  // Modal Edit & Delete Kriteria
+  const [editingCrit, setEditingCrit] = useState<ClinicalScreeningCriterionMaster | null>(null);
+  const [deletingCrit, setDeletingCrit] = useState<ClinicalScreeningCriterionMaster | null>(null);
+
   async function postMasterAction(body: any, successText: string) {
     setErrorMsg(null);
     setFeedbackMsg(null);
@@ -155,6 +182,71 @@ export function MasterDataView({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Action Handlers for Screening Criteria
+  async function handleAddCriterion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!critLabel.trim()) return;
+    await postMasterAction(
+      {
+        action: "ADD_SCREENING_CRITERION_MASTER",
+        domain_id: critDomain,
+        label: critLabel.trim(),
+        risk_tier: critRiskTier,
+        pathway: critPathway,
+        category_note: critCategoryNote.trim() || "-",
+        sort_order: Number(critSortOrder) || (catalog.clinical_screening_criteria?.length || 0) + 1,
+        active_status: critActiveStatus,
+      },
+      `Kriteria '${critLabel}' berhasil ditambahkan ke Master Skrining Klinis.`
+    );
+    setCritLabel("");
+    setCritCategoryNote("");
+    setCritSortOrder((catalog.clinical_screening_criteria?.length || 0) + 2);
+  }
+
+  async function handleUpdateCriterion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingCrit) return;
+    await postMasterAction(
+      {
+        action: "UPDATE_SCREENING_CRITERION_MASTER",
+        criterion_id: editingCrit.criterion_id,
+        domain_id: editingCrit.domain_id,
+        label: editingCrit.label,
+        risk_tier: editingCrit.risk_tier,
+        pathway: editingCrit.pathway,
+        category_note: editingCrit.category_note,
+        sort_order: Number(editingCrit.sort_order),
+        active_status: editingCrit.active_status,
+      },
+      `Kriteria '${editingCrit.label}' berhasil diperbarui.`
+    );
+    setEditingCrit(null);
+  }
+
+  async function handleDeleteCriterion() {
+    if (!deletingCrit) return;
+    await postMasterAction(
+      {
+        action: "DELETE_SCREENING_CRITERION_MASTER",
+        criterion_id: deletingCrit.criterion_id,
+      },
+      `Kriteria '${deletingCrit.label}' berhasil dihapus dari Master Skrining.`
+    );
+    setDeletingCrit(null);
+  }
+
+  async function handleToggleCriterionStatus(crit: ClinicalScreeningCriterionMaster) {
+    await postMasterAction(
+      {
+        action: "UPDATE_SCREENING_CRITERION_MASTER",
+        criterion_id: crit.criterion_id,
+        active_status: !crit.active_status,
+      },
+      `Status kriteria '${crit.label}' diubah menjadi ${!crit.active_status ? "Aktif" : "Non-Aktif"}.`
+    );
   }
 
   // Action Handlers for Unit
@@ -329,33 +421,39 @@ export function MasterDataView({
       <div className="rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 p-2.5 shadow-sm flex flex-wrap gap-2">
         {[
           {
-            id: "DOCTORS",
+            id: "SCREENING_CRITERIA",
             step: "1",
+            label: `Master Kriteria Skrining (${catalog.clinical_screening_criteria?.length || 0})`,
+            icon: ShieldAlert,
+          },
+          {
+            id: "DOCTORS",
+            step: "2",
             label: `Master Dokter DPJP (${catalog.doctors.length})`,
             icon: Stethoscope,
           },
           {
             id: "MIDWIVES_NURSES",
-            step: "2",
+            step: "3",
             label: `Master Bidan & Perawat (${catalog.midwives_nurses.length})`,
             icon: UserCheck,
           },
           {
             id: "UNITS_REFERRALS",
-            step: "3",
+            step: "4",
             label: `Master Unit & Asal Rujukan (${db.units.length + catalog.referral_facilities.length})`,
             icon: Building2,
           },
           {
             id: "COMPLAINTS_COMORBIDS",
-            step: "4",
+            step: "5",
             label: `Master Template Keluhan & Komorbid (${catalog.chief_complaints.length + catalog.comorbidity_templates.length})`,
             icon: ClipboardList,
           },
           {
             id: "RISK_FACTORS_LABS",
-            step: "5",
-            label: `Master Faktor Risiko 4T/PE & Lab (${db.risk_factors.length})`,
+            step: "6",
+            label: `Master Faktor Risiko Legacy (${db.risk_factors.length})`,
             icon: TestTube,
           },
         ].map((item) => {
@@ -405,6 +503,369 @@ export function MasterDataView({
       {errorMsg && (
         <div className="rounded-xl border border-red-300 bg-red-50 p-3.5 text-xs font-semibold text-red-900">
           {errorMsg}
+        </div>
+      )}
+
+      {/* TAB 0: MASTER KRITERIA SKRINING KLINIS 4 DOMAIN (TERPADU PE & HPP) */}
+      {tab === "SCREENING_CRITERIA" && (
+        <div className="space-y-6">
+          {/* Header & Statistik Kriteria */}
+          <div className="rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/70 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950/40 p-5 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <span>Pusat Data Master Kriteria Skrining Klinis (4 Domain Terpadu)</span>
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Kelola daftar butir pertanyaan skrining admisi, bobot risiko klinis, dan jalur skrining secara dinamis tanpa perlu koding ulang.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-mono text-xs font-black shadow-xs">
+                  {(catalog.clinical_screening_criteria || []).length} Kriteria Terdaftar
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1 text-xs font-bold">
+              <div className="rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-950/40 p-2.5 text-center">
+                <div className="text-[10px] text-rose-700 dark:text-rose-300 uppercase">1. Maternal</div>
+                <div className="text-base font-black text-rose-900 dark:text-rose-100">
+                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_MATERNAL").length}
+                </div>
+              </div>
+              <div className="rounded-xl border border-blue-300 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 p-2.5 text-center">
+                <div className="text-[10px] text-blue-700 dark:text-blue-300 uppercase">2. Obstetri</div>
+                <div className="text-base font-black text-blue-900 dark:text-blue-100">
+                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_OBSTETRI").length}
+                </div>
+              </div>
+              <div className="rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50/70 dark:bg-purple-950/40 p-2.5 text-center">
+                <div className="text-[10px] text-purple-700 dark:text-purple-300 uppercase">3. Janin</div>
+                <div className="text-base font-black text-purple-900 dark:text-purple-100">
+                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_JANIN").length}
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/40 p-2.5 text-center">
+                <div className="text-[10px] text-amber-700 dark:text-amber-300 uppercase">4. Kombinasi</div>
+                <div className="text-base font-black text-amber-900 dark:text-amber-100">
+                  {(catalog.clinical_screening_criteria || []).filter((c) => c.domain_id === "DOMAIN_KOMBINASI").length}
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-1 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 p-2.5 text-center">
+                <div className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase">Status Aktif</div>
+                <div className="text-base font-black text-emerald-900 dark:text-emerald-100">
+                  {(catalog.clinical_screening_criteria || []).filter((c) => c.active_status).length} / {(catalog.clinical_screening_criteria || []).length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Form Tambah Kriteria Baru (Kiri, 4 Kolom) */}
+            <form
+              onSubmit={handleAddCriterion}
+              className="lg:col-span-4 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3.5 text-xs h-fit"
+            >
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-blue-100 dark:border-blue-900/60 pb-3">
+                <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span>Tambah Kriteria Skrining Baru</span>
+              </h3>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    1. Domain Klinis *
+                  </label>
+                  <select
+                    value={critDomain}
+                    onChange={(e) => setCritDomain(e.target.value as ScreeningDomainId)}
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="DOMAIN_MATERNAL">1. DOMAIN MATERNAL (Kondisi Ibu)</option>
+                    <option value="DOMAIN_OBSTETRI">2. DOMAIN OBSTETRI (Proses/Tindakan)</option>
+                    <option value="DOMAIN_JANIN">3. DOMAIN JANIN (Kondisi/Jumlah Janin)</option>
+                    <option value="DOMAIN_KOMBINASI">4. DOMAIN KOMBINASI RISIKO (Ambang Batas)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      2. Tingkat Risiko *
+                    </label>
+                    <select
+                      value={critRiskTier}
+                      onChange={(e) => setCritRiskTier(e.target.value as RiskCategory)}
+                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="LOW">Rendah (Hijau)</option>
+                      <option value="MODERATE">Sedang (Kuning)</option>
+                      <option value="HIGH">Tinggi / Berat (Merah)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      3. Jalur Skrining *
+                    </label>
+                    <select
+                      value={critPathway}
+                      onChange={(e) => setCritPathway(e.target.value as "ALL" | "PE" | "HPP")}
+                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="ALL">Keduanya (PE & HPP)</option>
+                      <option value="PE">Khusus PE Saja</option>
+                      <option value="HPP">Khusus HPP Saja</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    4. Teks Kriteria / Pertanyaan *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={critLabel}
+                    onChange={(e) => setCritLabel(e.target.value)}
+                    placeholder="Contoh: Tekanan darah >= 160/110 mmHg (menetap >= 15 menit)"
+                    required
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 p-2.5 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      5. Kategori Medis
+                    </label>
+                    <input
+                      type="text"
+                      value={critCategoryNote}
+                      onChange={(e) => setCritCategoryNote(e.target.value)}
+                      placeholder="Misal: Tanda Vital / 4T Tonus"
+                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      6. Urutan Tampil
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={critSortOrder}
+                      onChange={(e) => setCritSortOrder(Number(e.target.value))}
+                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="critActiveCheck"
+                    checked={critActiveStatus}
+                    onChange={(e) => setCritActiveStatus(e.target.checked)}
+                    className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="critActiveCheck" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    Aktifkan langsung di formulir skrining pasien
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 shadow-sm transition-all duration-200 active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  <span>+ Simpan Kriteria ke Master</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Tabel Daftar Kriteria (Kanan, 8 Kolom) */}
+            <div className="lg:col-span-8 space-y-4">
+              {/* Toolbar Pencarian & Filter */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={critSearch}
+                    onChange={(e) => setCritSearch(e.target.value)}
+                    placeholder="Cari teks pertanyaan kriteria atau catatan..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={critFilterDomain}
+                    onChange={(e) => setCritFilterDomain(e.target.value)}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                  >
+                    <option value="ALL">Semua Domain</option>
+                    <option value="DOMAIN_MATERNAL">1. Maternal</option>
+                    <option value="DOMAIN_OBSTETRI">2. Obstetri</option>
+                    <option value="DOMAIN_JANIN">3. Janin</option>
+                    <option value="DOMAIN_KOMBINASI">4. Kombinasi</option>
+                  </select>
+
+                  <select
+                    value={critFilterTier}
+                    onChange={(e) => setCritFilterTier(e.target.value)}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                  >
+                    <option value="ALL">Semua Risiko</option>
+                    <option value="LOW">Rendah (Hijau)</option>
+                    <option value="MODERATE">Sedang (Kuning)</option>
+                    <option value="HIGH">Tinggi (Merah)</option>
+                  </select>
+
+                  <select
+                    value={critFilterPathway}
+                    onChange={(e) => setCritFilterPathway(e.target.value)}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                  >
+                    <option value="ALL">Semua Jalur</option>
+                    <option value="PE">Jalur PE</option>
+                    <option value="HPP">Jalur HPP</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Data Table */}
+              <div className="rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                      <tr>
+                        <th className="py-3 px-3 w-12 text-center">No</th>
+                        <th className="py-3 px-3 w-28">Domain</th>
+                        <th className="py-3 px-3">Teks Kriteria Skrining</th>
+                        <th className="py-3 px-3 w-24 text-center">Risiko</th>
+                        <th className="py-3 px-3 w-20 text-center">Jalur</th>
+                        <th className="py-3 px-3 w-24 text-center">Status</th>
+                        <th className="py-3 px-3 w-24 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {((catalog.clinical_screening_criteria || [])
+                        .filter((c) => {
+                          if (critFilterDomain !== "ALL" && c.domain_id !== critFilterDomain) return false;
+                          if (critFilterTier !== "ALL" && c.risk_tier !== critFilterTier) return false;
+                          if (critFilterPathway !== "ALL" && c.pathway !== critFilterPathway && c.pathway !== "ALL") return false;
+                          if (critSearch.trim()) {
+                            const q = critSearch.toLowerCase();
+                            const matchLabel = c.label.toLowerCase().includes(q);
+                            const matchNote = (c.category_note || "").toLowerCase().includes(q);
+                            if (!matchLabel && !matchNote) return false;
+                          }
+                          return true;
+                        })
+                        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                      ).map((c, idx) => {
+                        const domainLabel =
+                          c.domain_id === "DOMAIN_MATERNAL"
+                            ? "1. Maternal"
+                            : c.domain_id === "DOMAIN_OBSTETRI"
+                            ? "2. Obstetri"
+                            : c.domain_id === "DOMAIN_JANIN"
+                            ? "3. Janin"
+                            : "4. Kombinasi";
+
+                        const domainColor =
+                          c.domain_id === "DOMAIN_MATERNAL"
+                            ? "bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-800"
+                            : c.domain_id === "DOMAIN_OBSTETRI"
+                            ? "bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-800"
+                            : c.domain_id === "DOMAIN_JANIN"
+                            ? "bg-purple-50 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-200 dark:border-purple-800"
+                            : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800";
+
+                        const tierColor =
+                          c.risk_tier === "HIGH"
+                            ? "bg-red-50 text-red-800 border-red-300 dark:bg-red-950/50 dark:text-red-200 dark:border-red-800"
+                            : c.risk_tier === "MODERATE"
+                            ? "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800"
+                            : "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-800";
+
+                        return (
+                          <tr key={c.criterion_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                            <td className="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500">
+                              {c.sort_order || idx + 1}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${domainColor}`}>
+                                {domainLabel}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                                {c.label}
+                              </div>
+                              {c.category_note && c.category_note !== "-" && (
+                                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                  Kategori: {c.category_note}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${tierColor}`}>
+                                {c.risk_tier === "HIGH" ? "TINGGI" : c.risk_tier === "MODERATE" ? "SEDANG" : "RENDAH"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                {c.pathway || "ALL"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCriterionStatus(c)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                                  c.active_status
+                                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-300"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                                }`}
+                              >
+                                <Power className="h-3 w-3" />
+                                <span>{c.active_status ? "Aktif" : "Nonaktif"}</span>
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingCrit(c)}
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                  title="Edit Kriteria"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingCrit(c)}
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-red-600 hover:bg-red-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                  title="Hapus Kriteria"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2162,6 +2623,238 @@ export function MasterDataView({
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shadow-red-500/20"
               >
                 {submitting ? "Menghapus..." : "Ya, Hapus Staf"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 9: EDIT MASTER KRITERIA SKRINING KLINIS                 */}
+      {/* ============================================================== */}
+      {editingCrit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#131f37] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563eb] dark:text-blue-400">
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Edit Master Kriteria Skrining
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    ID: {editingCrit.criterion_id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCrit(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateCriterion} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Domain Klinis
+                </label>
+                <select
+                  value={editingCrit.domain_id}
+                  onChange={(e) =>
+                    setEditingCrit({
+                      ...editingCrit,
+                      domain_id: e.target.value as ScreeningDomainId,
+                    })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none font-medium"
+                >
+                  <option value="DOMAIN_MATERNAL">1. DOMAIN MATERNAL (Kondisi Ibu)</option>
+                  <option value="DOMAIN_OBSTETRI">2. DOMAIN OBSTETRI (Proses/Tindakan)</option>
+                  <option value="DOMAIN_JANIN">3. DOMAIN JANIN (Kondisi/Jumlah Janin)</option>
+                  <option value="DOMAIN_KOMBINASI">4. DOMAIN KOMBINASI RISIKO (Ambang Batas)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Tingkat Risiko
+                  </label>
+                  <select
+                    value={editingCrit.risk_tier}
+                    onChange={(e) =>
+                      setEditingCrit({
+                        ...editingCrit,
+                        risk_tier: e.target.value as RiskCategory,
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none font-medium"
+                  >
+                    <option value="LOW">Rendah (Hijau)</option>
+                    <option value="MODERATE">Sedang (Kuning)</option>
+                    <option value="HIGH">Tinggi / Berat (Merah)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Jalur Skrining
+                  </label>
+                  <select
+                    value={editingCrit.pathway}
+                    onChange={(e) =>
+                      setEditingCrit({
+                        ...editingCrit,
+                        pathway: e.target.value as "ALL" | "PE" | "HPP",
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none font-medium"
+                  >
+                    <option value="ALL">Keduanya (PE & HPP)</option>
+                    <option value="PE">Khusus PE Saja</option>
+                    <option value="HPP">Khusus HPP Saja</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Teks Kriteria / Pertanyaan Skrining
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingCrit.label}
+                  onChange={(e) =>
+                    setEditingCrit({
+                      ...editingCrit,
+                      label: e.target.value,
+                    })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Kategori Medis
+                  </label>
+                  <input
+                    type="text"
+                    value={editingCrit.category_note || ""}
+                    onChange={(e) =>
+                      setEditingCrit({
+                        ...editingCrit,
+                        category_note: e.target.value,
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Urutan Tampil
+                  </label>
+                  <input
+                    type="number"
+                    value={editingCrit.sort_order || 1}
+                    onChange={(e) =>
+                      setEditingCrit({
+                        ...editingCrit,
+                        sort_order: Number(e.target.value),
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono focus:border-[#2563eb] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editCritActive"
+                  checked={editingCrit.active_status}
+                  onChange={(e) =>
+                    setEditingCrit({
+                      ...editingCrit,
+                      active_status: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="editCritActive" className="font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                  Aktif di formulir skrining pasien
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingCrit(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md shadow-blue-500/20"
+                >
+                  {submitting ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 10: HAPUS MASTER KRITERIA SKRINING                       */}
+      {/* ============================================================== */}
+      {deletingCrit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#131f37] rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Hapus Kriteria Skrining
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Konfirmasi penghapusan butir skrining master
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Apakah Anda yakin ingin menghapus kriteria skrining:
+              <br />
+              <strong className="text-slate-900 dark:text-white block mt-1.5 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                &ldquo;{deletingCrit.label}&rdquo;
+              </strong>
+            </p>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeletingCrit(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleDeleteCriterion}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shadow-red-500/20"
+              >
+                {submitting ? "Menghapus..." : "Ya, Hapus Kriteria"}
               </button>
             </div>
           </div>

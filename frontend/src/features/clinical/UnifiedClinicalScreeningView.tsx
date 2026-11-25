@@ -47,6 +47,7 @@ import type {
   RiskFactorMaster,
   SigapDatabase,
   AdmissionStatus,
+  ScreeningDomainId,
 } from "@/types";
 
 interface UnifiedClinicalScreeningViewProps {
@@ -554,12 +555,45 @@ export function UnifiedClinicalScreeningView({
     setErrorMessage(null);
   }, [currentAdmission?.admission_id, activeInstrument, db.screening_risk_details, hppMasters, peMasters]);
 
+  // Dynamic Screening Domains loaded from Master Data, with fallback to default 23 items
+  const activeScreeningDomains: ScreeningDomainGroup[] = useMemo(() => {
+    const masterList =
+      db.master_catalog?.clinical_screening_criteria?.filter((c) => c.active_status) || [];
+    if (masterList.length === 0) {
+      return CLINICAL_SCREENING_DOMAINS;
+    }
+
+    const domainKeys: ScreeningDomainId[] = [
+      "DOMAIN_MATERNAL",
+      "DOMAIN_OBSTETRI",
+      "DOMAIN_JANIN",
+      "DOMAIN_KOMBINASI",
+    ];
+
+    return domainKeys.map((domainId) => {
+      const baseGroup = CLINICAL_SCREENING_DOMAINS.find((d) => d.id === domainId)!;
+      const items = masterList
+        .filter((c) => c.domain_id === domainId)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((c) => ({
+          id: c.criterion_id,
+          label: c.label,
+          riskTier: c.risk_tier,
+        }));
+
+      return {
+        ...baseGroup,
+        items,
+      };
+    });
+  }, [db.master_catalog?.clinical_screening_criteria]);
+
   // Hitung Aspek Ditinjau & Belum Dipilih Berdasarkan 4 Domain Klinis
   const allDomainItems = useMemo(() => {
-    return CLINICAL_SCREENING_DOMAINS.flatMap((d) => d.items);
-  }, []);
+    return activeScreeningDomains.flatMap((d) => d.items);
+  }, [activeScreeningDomains]);
 
-  const totalFactorsCount = allDomainItems.length; // 32 Butir Kriteria Sesuai Template
+  const totalFactorsCount = allDomainItems.length;
   const answeredCount = useMemo(() => {
     return allDomainItems.filter((item) => {
       const resp = responses[item.id];
@@ -571,11 +605,11 @@ export function UnifiedClinicalScreeningView({
 
   // Live Calculated Risk Category (Persis Kriteria Template Docx & Protokol)
   const calculatedRisk: RiskCategory = useMemo(() => {
-    // 1. Evaluasi Berdasarkan Respon 4 Domain Klinis (32 Butir Kriteria)
+    // 1. Evaluasi Berdasarkan Respon 4 Domain Klinis (Kriteria Master Dinamis)
     let domainHasHigh = false;
     let domainModCount = 0;
 
-    CLINICAL_SCREENING_DOMAINS.forEach((domain) => {
+    activeScreeningDomains.forEach((domain) => {
       domain.items.forEach((item) => {
         const val = responses[item.id];
         if (val === "YA") {
@@ -680,6 +714,7 @@ export function UnifiedClinicalScreeningView({
       return "LOW";
     }
   }, [
+    activeScreeningDomains,
     responses,
     peMasters,
     hppMasters,
@@ -1833,7 +1868,7 @@ export function UnifiedClinicalScreeningView({
               FORMAT TAMPILAN: [DOMAIN] , [RISIKO] - [NAMA KRITERIA] - [YA / TIDAK / BELUM DI CEK]
              ========================================================================= */}
           <div className="space-y-4">
-            {CLINICAL_SCREENING_DOMAINS.map((domain) => {
+            {activeScreeningDomains.map((domain) => {
               const DomainIcon = domain.icon;
               const isExpanded = expandedDomains[domain.id] ?? true;
 

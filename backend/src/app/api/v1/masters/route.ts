@@ -7,6 +7,7 @@ import {
 } from "@/lib/store";
 import {
   ChiefComplaintTemplate,
+  ClinicalScreeningCriterionMaster,
   ComorbidityTemplate,
   DoctorMaster,
   HospitalUnit,
@@ -474,6 +475,77 @@ export async function POST(req: Request) {
     const deleted = db.risk_factors.splice(rfIndex, 1)[0];
     saveDb(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.risk_factor_id });
+  }
+
+  // 8. Tambah Master Kriteria Skrining Klinis (4 Domain: Maternal, Obstetri, Janin, Kombinasi)
+  if (action === "ADD_SCREENING_CRITERION_MASTER") {
+    if (!db.master_catalog.clinical_screening_criteria) {
+      db.master_catalog.clinical_screening_criteria = [];
+    }
+    const newCrit: ClinicalScreeningCriterionMaster = {
+      criterion_id: body.criterion_id || `crit_${Date.now()}`,
+      domain_id: body.domain_id || "DOMAIN_MATERNAL",
+      label: body.label,
+      risk_tier: body.risk_tier || "MODERATE",
+      pathway: body.pathway || "ALL",
+      category_note: body.category_note || "-",
+      active_status: body.active_status !== undefined ? Boolean(body.active_status) : true,
+      sort_order: Number(body.sort_order || db.master_catalog.clinical_screening_criteria.length + 1),
+    };
+    db.master_catalog.clinical_screening_criteria.push(newCrit);
+
+    appendAuditLog(db, {
+      userId,
+      entity: "clinical_screening_criteria",
+      entityId: newCrit.criterion_id,
+      action: "CREATE",
+      changeSummary: `Menambahkan Master Kriteria Skrining [${newCrit.domain_id} - ${newCrit.risk_tier}]: ${newCrit.label}.`,
+    });
+    saveDb(db);
+    return NextResponse.json({ ok: true, criterion: newCrit });
+  }
+
+  // 8b. Update Master Kriteria Skrining Klinis
+  if (action === "UPDATE_SCREENING_CRITERION_MASTER") {
+    if (!db.master_catalog.clinical_screening_criteria) {
+      db.master_catalog.clinical_screening_criteria = [];
+    }
+    const cIndex = db.master_catalog.clinical_screening_criteria.findIndex(
+      (c) => c.criterion_id === body.criterion_id
+    );
+    if (cIndex === -1) {
+      return NextResponse.json({ ok: false, error: "Kriteria skrining tidak ditemukan" }, { status: 404 });
+    }
+    const old = db.master_catalog.clinical_screening_criteria[cIndex];
+    const updatedCrit: ClinicalScreeningCriterionMaster = {
+      ...old,
+      domain_id: body.domain_id || old.domain_id,
+      label: body.label || old.label,
+      risk_tier: body.risk_tier || old.risk_tier,
+      pathway: body.pathway || old.pathway,
+      category_note: body.category_note !== undefined ? body.category_note : old.category_note,
+      sort_order: body.sort_order !== undefined ? Number(body.sort_order) : old.sort_order,
+      active_status: body.active_status !== undefined ? Boolean(body.active_status) : old.active_status,
+    };
+    db.master_catalog.clinical_screening_criteria[cIndex] = updatedCrit;
+    saveDb(db);
+    return NextResponse.json({ ok: true, criterion: updatedCrit });
+  }
+
+  // 8c. Delete Master Kriteria Skrining Klinis
+  if (action === "DELETE_SCREENING_CRITERION_MASTER") {
+    if (!db.master_catalog.clinical_screening_criteria) {
+      db.master_catalog.clinical_screening_criteria = [];
+    }
+    const cIndex = db.master_catalog.clinical_screening_criteria.findIndex(
+      (c) => c.criterion_id === body.criterion_id
+    );
+    if (cIndex === -1) {
+      return NextResponse.json({ ok: false, error: "Kriteria skrining tidak ditemukan" }, { status: 404 });
+    }
+    const deleted = db.master_catalog.clinical_screening_criteria.splice(cIndex, 1)[0];
+    saveDb(db);
+    return NextResponse.json({ ok: true, deleted_id: deleted.criterion_id });
   }
 
   return NextResponse.json(

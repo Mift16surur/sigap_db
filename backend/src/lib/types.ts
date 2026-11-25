@@ -587,6 +587,23 @@ export interface ActionChecklistMaster {
   active_status: boolean;
 }
 
+export type ScreeningDomainId =
+  | "DOMAIN_MATERNAL"
+  | "DOMAIN_OBSTETRI"
+  | "DOMAIN_JANIN"
+  | "DOMAIN_KOMBINASI";
+
+export interface ClinicalScreeningCriterionMaster {
+  criterion_id: string;
+  domain_id: ScreeningDomainId;
+  label: string;
+  risk_tier: RiskCategory;
+  pathway: "PE" | "HPP" | "ALL";
+  category_note?: string;
+  active_status: boolean;
+  sort_order: number;
+}
+
 export interface MasterCatalog {
   doctors: DoctorMaster[];
   midwives_nurses: MidwifeNurseMaster[];
@@ -596,6 +613,7 @@ export interface MasterCatalog {
   pe_symptom_masters: PeSymptomMaster[];
   lab_parameter_masters: LabParameterMaster[];
   action_checklist_masters: ActionChecklistMaster[];
+  clinical_screening_criteria?: ClinicalScreeningCriterionMaster[];
   address_districts: string[];
   emergency_relations: string[];
 }
