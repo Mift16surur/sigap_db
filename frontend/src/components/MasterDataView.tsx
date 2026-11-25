@@ -738,9 +738,9 @@ export function MasterDataView({
                       onChange={(e) => setCritRiskTier(e.target.value as RiskCategory)}
                       className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="LOW">Rendah (Hijau)</option>
-                      <option value="MODERATE">Sedang (Kuning)</option>
-                      <option value="HIGH">Tinggi / Berat (Merah)</option>
+                      <option value="LOW">Rendah</option>
+                      <option value="MODERATE">Sedang</option>
+                      <option value="HIGH">Tinggi</option>
                     </select>
                   </div>
                   <div>
@@ -857,9 +857,9 @@ export function MasterDataView({
                     className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
                   >
                     <option value="ALL">Semua Risiko</option>
-                    <option value="LOW">Rendah (Hijau)</option>
-                    <option value="MODERATE">Sedang (Kuning)</option>
-                    <option value="HIGH">Tinggi (Merah)</option>
+                    <option value="LOW">Rendah</option>
+                    <option value="MODERATE">Sedang</option>
+                    <option value="HIGH">Tinggi</option>
                   </select>
 
                   <select
@@ -952,7 +952,7 @@ export function MasterDataView({
                             </td>
                             <td className="py-2.5 px-3 text-center">
                               <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${tierColor}`}>
-                                {c.risk_tier === "HIGH" ? "TINGGI" : c.risk_tier === "MODERATE" ? "SEDANG" : "RENDAH"}
+                                {c.risk_tier === "HIGH" ? "Tinggi" : c.risk_tier === "MODERATE" ? "Sedang" : "Rendah"}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 text-center">
@@ -1136,9 +1136,9 @@ export function MasterDataView({
                       onChange={(e) => setBundleRisk(e.target.value as RiskCategory)}
                       className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="LOW">Rendah (Hijau)</option>
-                      <option value="MODERATE">Sedang (Kuning)</option>
-                      <option value="HIGH">Tinggi / Berat (Merah)</option>
+                      <option value="LOW">Rendah</option>
+                      <option value="MODERATE">Sedang</option>
+                      <option value="HIGH">Tinggi</option>
                     </select>
                   </div>
                 </div>
@@ -1265,9 +1265,9 @@ export function MasterDataView({
                     className="rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 bg-white dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:outline-none"
                   >
                     <option value="ALL">Semua Risiko</option>
-                    <option value="LOW">Rendah (Hijau)</option>
-                    <option value="MODERATE">Sedang (Kuning)</option>
-                    <option value="HIGH">Tinggi (Merah)</option>
+                    <option value="LOW">Rendah</option>
+                    <option value="MODERATE">Sedang</option>
+                    <option value="HIGH">Tinggi</option>
                   </select>
                 </div>
               </div>
@@ -1340,7 +1340,11 @@ export function MasterDataView({
                               <span
                                 className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${riskBadge}`}
                               >
-                                {b.risk_category}
+                                {b.risk_category === "HIGH"
+                                  ? "Tinggi"
+                                  : b.risk_category === "MODERATE"
+                                  ? "Sedang"
+                                  : "Rendah"}
                               </span>
                             </td>
                             <td className="py-2.5 px-2.5 text-center">
@@ -2474,7 +2478,13 @@ export function MasterDataView({
                       <p className="text-slate-500 dark:text-slate-400 mt-0.5">{rf.definition}</p>
                     </div>
                     <span className="shrink-0 rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                      {rf.risk_tier}
+                      {rf.risk_tier === "HIGH"
+                        ? "Tinggi"
+                        : rf.risk_tier === "MODERATE"
+                        ? "Sedang"
+                        : rf.risk_tier === "CRITICAL_IMMEDIATE"
+                        ? "Kritis"
+                        : "Rendah"}
                     </span>
                   </div>
                 ))}
@@ -3223,9 +3233,9 @@ export function MasterDataView({
                     }
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none font-medium"
                   >
-                    <option value="LOW">Rendah (Hijau)</option>
-                    <option value="MODERATE">Sedang (Kuning)</option>
-                    <option value="HIGH">Tinggi / Berat (Merah)</option>
+                    <option value="LOW">Rendah</option>
+                    <option value="MODERATE">Sedang</option>
+                    <option value="HIGH">Tinggi</option>
                   </select>
                 </div>
                 <div>
@@ -3452,9 +3462,9 @@ export function MasterDataView({
                     }
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-semibold focus:border-[#2563eb] outline-none"
                   >
-                    <option value="LOW">Rendah (Hijau)</option>
-                    <option value="MODERATE">Sedang (Kuning)</option>
-                    <option value="HIGH">Tinggi / Berat (Merah)</option>
+                    <option value="LOW">Rendah</option>
+                    <option value="MODERATE">Sedang</option>
+                    <option value="HIGH">Tinggi</option>
                   </select>
                 </div>
               </div>
@@ -3595,7 +3605,13 @@ export function MasterDataView({
               Apakah Anda yakin ingin menghapus item bundle:
               <br />
               <strong className="text-slate-900 dark:text-white block mt-1.5 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                &ldquo;{deletingBundle.label}&rdquo; ({deletingBundle.pathway} - {deletingBundle.risk_category})
+                &ldquo;{deletingBundle.label}&rdquo; ({deletingBundle.pathway} -{" "}
+                {deletingBundle.risk_category === "HIGH"
+                  ? "Tinggi"
+                  : deletingBundle.risk_category === "MODERATE"
+                  ? "Sedang"
+                  : "Rendah"}
+                )
               </strong>
             </p>
 
