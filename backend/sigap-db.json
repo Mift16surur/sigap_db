@@ -615,7 +615,7 @@
         "domain_id": "DOMAIN_KOMBINASI",
         "label": "Terdapat >= 1 faktor risiko tinggi ATAU >= 2 faktor risiko sedang tanpa tanda pemberatan",
         "risk_tier": "MODERATE",
-        "pathway": "ALL",
+        "pathway": "PE",
         "category_note": "Kaidah Skor Ambang Sedang",
         "active_status": true,
         "sort_order": 22
@@ -625,7 +625,7 @@
         "domain_id": "DOMAIN_KOMBINASI",
         "label": "Kombinasi komplikasi berat (misal: preeklamsia berat disertai gangguan lab/tanda pemberatan atau skor kumulatif risiko tinggi ganda)",
         "risk_tier": "HIGH",
-        "pathway": "ALL",
+        "pathway": "PE",
         "category_note": "Kaidah Komplikasi Berat Ganda",
         "active_status": true,
         "sort_order": 23

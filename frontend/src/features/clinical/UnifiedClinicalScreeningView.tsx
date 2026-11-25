@@ -585,7 +585,7 @@ export function UnifiedClinicalScreeningView({
     setErrorMessage(null);
   }, [currentAdmission?.admission_id, activeInstrument, db.screening_risk_details, hppMasters, peMasters]);
 
-  // Dynamic Screening Domains loaded from Master Data, with fallback to default 23 items
+  // Dynamic Screening Domains loaded from Master Data, filtered by activeInstrument and active status
   const activeScreeningDomains: ScreeningDomainGroup[] = useMemo(() => {
     const rawList =
       db.master_catalog?.clinical_screening_criteria &&
@@ -593,10 +593,11 @@ export function UnifiedClinicalScreeningView({
         ? db.master_catalog.clinical_screening_criteria
         : DEFAULT_CLINICAL_SCREENING_CRITERIA;
 
-    const masterList = rawList.filter((c) => c.active_status);
-    if (masterList.length === 0) {
-      return CLINICAL_SCREENING_DOMAINS;
-    }
+    const masterList = rawList.filter(
+      (c) =>
+        c.active_status &&
+        (c.pathway === "ALL" || c.pathway === activeInstrument)
+    );
 
     const domainKeys: ScreeningDomainId[] = [
       "DOMAIN_MATERNAL",
@@ -605,23 +606,25 @@ export function UnifiedClinicalScreeningView({
       "DOMAIN_KOMBINASI",
     ];
 
-    return domainKeys.map((domainId) => {
-      const baseGroup = CLINICAL_SCREENING_DOMAINS.find((d) => d.id === domainId)!;
-      const items = masterList
-        .filter((c) => c.domain_id === domainId)
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-        .map((c) => ({
-          id: c.criterion_id,
-          label: c.label,
-          riskTier: c.risk_tier,
-        }));
+    return domainKeys
+      .map((domainId) => {
+        const baseGroup = CLINICAL_SCREENING_DOMAINS.find((d) => d.id === domainId)!;
+        const items = masterList
+          .filter((c) => c.domain_id === domainId)
+          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+          .map((c) => ({
+            id: c.criterion_id,
+            label: c.label,
+            riskTier: c.risk_tier,
+          }));
 
-      return {
-        ...baseGroup,
-        items,
-      };
-    });
-  }, [db.master_catalog?.clinical_screening_criteria]);
+        return {
+          ...baseGroup,
+          items,
+        };
+      })
+      .filter((domain) => domain.items.length > 0);
+  }, [db.master_catalog?.clinical_screening_criteria, activeInstrument]);
 
   // Hitung Aspek Ditinjau & Belum Dipilih Berdasarkan 4 Domain Klinis
   const allDomainItems = useMemo(() => {
