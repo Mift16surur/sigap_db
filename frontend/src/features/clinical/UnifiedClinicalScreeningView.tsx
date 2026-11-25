@@ -34,6 +34,11 @@ import {
   Gauge,
   TestTube,
   AlertOctagon,
+  History,
+  Printer,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
 } from "lucide-react";
 import { apiRequest, EnrichedAdmission } from "@/services/api-client";
 import {
@@ -308,6 +313,18 @@ export function UnifiedClinicalScreeningView({
       setActiveInstrument("PE");
     }
   }, [selectedAdmId, isPeScreeningCompleted, activeInstrument]);
+
+  // State Panel Samping Riwayat Skrining Pasien (Kolom Kanan)
+  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(true);
+  const [viewingHistoryAdm, setViewingHistoryAdm] = useState<any | null>(null);
+
+  // Riwayat Kunjungan / Skrining Pasien Terpilih (Longitudinal History)
+  const patientHistoryRecords = useMemo(() => {
+    if (!currentAdmission?.patient_id) return [];
+    return enrichedAdmissions
+      .filter((adm) => adm.patient_id === currentAdmission.patient_id)
+      .sort((a, b) => new Date(b.admission_date).getTime() - new Date(a.admission_date).getTime());
+  }, [enrichedAdmissions, currentAdmission?.patient_id]);
 
   // 4. State Accordion Kategori & Filter Risiko (Section 1)
   const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({
@@ -1209,11 +1226,11 @@ export function UnifiedClinicalScreeningView({
   };
 
   return (
-    <div className="flex flex-col xl:flex-row gap-5 items-start">
+    <div className="flex flex-col xl:flex-row gap-4 items-start w-full">
       {/* =========================================================================
-          KOLOM KIRI: DAFTAR PASIEN (PERSIS SEPERTI GAMBAR REFERENSI USER)
+          KOLOM KIRI (20%): DAFTAR PASIEN (PERSIS SEPERTI GAMBAR REFERENSI USER)
          ========================================================================= */}
-      <div className="w-full xl:w-[320px] 2xl:w-[350px] shrink-0 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col">
+      <div className="w-full xl:w-[22%] 2xl:w-[20%] shrink-0 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col">
         {/* Header Biru "Daftar Pasien" */}
         <div className="bg-[#2457d6] text-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1449,9 +1466,13 @@ export function UnifiedClinicalScreeningView({
       </div>
 
       {/* =========================================================================
-          KOLOM KANAN: WORKSPACE SKRINING KLINIS UTAMA (PERSIS SEPERTI GAMBAR USER)
+          KOLOM TENGAH (60%): LEMBAR KERJA PENGKAJIAN SKRINING KLINIS UTAMA
          ========================================================================= */}
-      <div className="flex-1 w-full space-y-5">
+      <div
+        className={`w-full ${
+          isHistoryPanelOpen ? "xl:w-[56%] 2xl:w-[60%]" : "xl:flex-1"
+        } space-y-5 min-w-0 transition-all duration-200`}
+      >
         {/* Banner Alert Sukses / Error */}
         {successMessage && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
@@ -2230,6 +2251,379 @@ export function UnifiedClinicalScreeningView({
       </div>
     )}
       </div>
+
+      {/* =========================================================================
+          KOLOM KANAN (20%): DAFTAR HISTORY PASIEN (PERSIS GAMBAR REFERENSI SIMRS)
+         ========================================================================= */}
+      {isHistoryPanelOpen ? (
+        <div className="w-full xl:w-[22%] 2xl:w-[20%] shrink-0 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col transition-all duration-200">
+          {/* Header Biru "Daftar History Pasien" */}
+          <div className="bg-[#2457d6] text-white px-3.5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-white/20 flex items-center justify-center">
+                <History className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <span className="font-bold text-xs tracking-wide block leading-tight">
+                  Daftar History Pasien
+                </span>
+                <span className="text-[10px] text-blue-100 font-medium">
+                  Histori Skrining & Rawat
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onRefresh()}
+                className="p-1 rounded-lg hover:bg-white/10 text-white/90 hover:text-white transition-colors cursor-pointer"
+                title="Muat ulang histori"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsHistoryPanelOpen(false)}
+                className="p-1 rounded-lg hover:bg-white/10 text-white/90 hover:text-white transition-colors cursor-pointer"
+                title="Sembunyikan panel riwayat"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-header Ringkasan Pasien Terpilih */}
+          <div className="p-3 border-b border-blue-100 dark:border-blue-900/60 bg-blue-50/20 dark:bg-slate-800/30">
+            <div className="flex items-center justify-between gap-2">
+              <div className="truncate">
+                <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                  {currentAdmission?.patient?.full_name || "Pilih Pasien"}
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                  RM {currentAdmission?.patient?.mrn || "-"}
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-black text-[10px] shrink-0 border border-blue-200 dark:border-blue-800">
+                {patientHistoryRecords.length} Kunjungan
+              </span>
+            </div>
+          </div>
+
+          {/* Daftar Kartu Riwayat (List of History Cards - Persis Gambar SIMRS) */}
+          <div className="p-3 space-y-2.5 max-h-[calc(100vh-280px)] overflow-y-auto divide-y-0">
+            {patientHistoryRecords.length === 0 ? (
+              <div className="text-center py-8 px-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2 text-xs text-slate-400">
+                <Calendar className="h-6 w-6 mx-auto text-slate-300 dark:text-slate-600" />
+                <p>Belum ada riwayat skrining sebelumnya untuk pasien ini.</p>
+              </div>
+            ) : (
+              patientHistoryRecords.map((adm, idx) => {
+                const isCurrent = adm.admission_id === currentAdmission?.admission_id;
+                const peResult = adm.latest_pe_result;
+                const hppResult = adm.latest_hpp_result;
+
+                return (
+                  <div
+                    key={adm.admission_id || idx}
+                    className={`rounded-xl border p-3 text-xs transition-all space-y-2 relative group ${
+                      isCurrent
+                        ? "border-blue-400 dark:border-blue-600 bg-blue-50/40 dark:bg-blue-950/20 ring-1 ring-blue-300/60"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs"
+                    }`}
+                  >
+                    {/* Header Kartu: Tanggal/Jam & Tombol Cetak / Detail */}
+                    <div className="flex items-start justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                          {new Date(adm.admission_date).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}{" "}
+                          <span className="text-slate-500 font-normal">
+                            {new Date(adm.admission_date).toLocaleTimeString("id-ID", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </span>
+                        {isCurrent && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-blue-600 text-white">
+                            Aktif
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.print();
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Cetak lembar riwayat ini"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewingHistoryAdm(adm)}
+                          className="p-1 rounded text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Lihat detail skrining"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Informasi Dokter DPJP & Unit (Persis Gambar SIMRS) */}
+                    <div
+                      onClick={() => setViewingHistoryAdm(adm)}
+                      className="cursor-pointer space-y-1"
+                    >
+                      <div className="font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
+                        <Stethoscope className="h-3 w-3 text-blue-600 shrink-0" />
+                        <span className="truncate">
+                          {adm.attending_doctor_name || "dr. DPJP Sp.OG Jaga"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700">
+                          {adm.unit?.name || "VK Bersalin"}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
+                            adm.penjamin?.includes("BPJS")
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300"
+                              : "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                          }`}
+                        >
+                          {adm.penjamin || "UMUM"}
+                        </span>
+                      </div>
+
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        #{adm.admission_code || adm.admission_id}
+                      </div>
+                    </div>
+
+                    {/* Hasil Skrining PE & HPP (Badge Rendah / Sedang / Tinggi) */}
+                    <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap gap-1.5">
+                      {peResult ? (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                            peResult.category === "HIGH"
+                              ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/70 dark:text-rose-200"
+                              : peResult.category === "MODERATE"
+                              ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/70 dark:text-amber-200"
+                              : "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-200"
+                          }`}
+                        >
+                          PE:{" "}
+                          {peResult.category === "HIGH"
+                            ? "Tinggi"
+                            : peResult.category === "MODERATE"
+                            ? "Sedang"
+                            : "Rendah"}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">PE: Belum</span>
+                      )}
+
+                      {hppResult ? (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                            hppResult.category === "HIGH"
+                              ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/70 dark:text-rose-200"
+                              : hppResult.category === "MODERATE"
+                              ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/70 dark:text-amber-200"
+                              : "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-200"
+                          }`}
+                        >
+                          HPP:{" "}
+                          {hppResult.category === "HIGH"
+                            ? "Tinggi"
+                            : hppResult.category === "MODERATE"
+                            ? "Sedang"
+                            : "Rendah"}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">• HPP: Belum</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Tombol Ramping Expand Ketika Panel Kanan Diciutkan */
+        <button
+          type="button"
+          onClick={() => setIsHistoryPanelOpen(true)}
+          className="hidden xl:flex flex-col items-center justify-center py-4 px-2.5 rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 shadow-sm hover:bg-blue-50 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold text-xs gap-3 cursor-pointer transition-all shrink-0 sticky top-4"
+          title="Buka Daftar History Pasien"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="[writing-mode:vertical-lr] rotate-180 text-[10px] font-black tracking-wider uppercase">
+            History Pasien ({patientHistoryRecords.length})
+          </span>
+          <History className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* =========================================================================
+          MODAL PREVIEW DETAIL RIWAYAT SKRINING PASIEN (LONGITUDINAL PREVIEW)
+         ========================================================================= */}
+      {viewingHistoryAdm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#131f37] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                  <History className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Detail Riwayat Kunjungan & Skrining
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    No. Rawat #{viewingHistoryAdm.admission_code || viewingHistoryAdm.admission_id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingHistoryAdm(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Info Pasien & Waktu */}
+              <div className="rounded-xl border border-blue-100 dark:border-blue-900/60 bg-blue-50/30 dark:bg-slate-800/40 p-3 space-y-1">
+                <div className="flex justify-between font-bold text-slate-900 dark:text-slate-100">
+                  <span>{viewingHistoryAdm.patient?.full_name}</span>
+                  <span className="font-mono">RM {viewingHistoryAdm.patient?.mrn}</span>
+                </div>
+                <div className="flex justify-between text-slate-500 dark:text-slate-400 text-[11px]">
+                  <span>Unit: {viewingHistoryAdm.unit?.name || "VK Bersalin"}</span>
+                  <span>
+                    {new Date(viewingHistoryAdm.admission_date).toLocaleDateString("id-ID", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                  DPJP: {viewingHistoryAdm.attending_doctor_name || "dr. DPJP Sp.OG"}
+                </div>
+              </div>
+
+              {/* Status Skrining PE & HPP */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-xl border p-3 bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 space-y-1">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold">Skrining PE</div>
+                  <div className="font-black text-sm">
+                    {viewingHistoryAdm.latest_pe_result ? (
+                      <span
+                        className={
+                          viewingHistoryAdm.latest_pe_result.category === "HIGH"
+                            ? "text-rose-600"
+                            : viewingHistoryAdm.latest_pe_result.category === "MODERATE"
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                        }
+                      >
+                        RISIKO{" "}
+                        {viewingHistoryAdm.latest_pe_result.category === "HIGH"
+                          ? "TINGGI"
+                          : viewingHistoryAdm.latest_pe_result.category === "MODERATE"
+                          ? "SEDANG"
+                          : "RENDAH"}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-xs">Belum dievaluasi</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border p-3 bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 space-y-1">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold">Skrining HPP</div>
+                  <div className="font-black text-sm">
+                    {viewingHistoryAdm.latest_hpp_result ? (
+                      <span
+                        className={
+                          viewingHistoryAdm.latest_hpp_result.category === "HIGH"
+                            ? "text-rose-600"
+                            : viewingHistoryAdm.latest_hpp_result.category === "MODERATE"
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                        }
+                      >
+                        RISIKO{" "}
+                        {viewingHistoryAdm.latest_hpp_result.category === "HIGH"
+                          ? "TINGGI"
+                          : viewingHistoryAdm.latest_hpp_result.category === "MODERATE"
+                          ? "SEDANG"
+                          : "RENDAH"}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-xs">Belum dievaluasi</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Catatan / Tanda Vital Jika Ada */}
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-1 text-slate-600 dark:text-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">
+                  Status Pelayanan:
+                </span>
+                <p className="text-[11px] leading-relaxed">
+                  Status admisi:{" "}
+                  <strong>{viewingHistoryAdm.status === "CLOSED" ? "Pulang / Selesai" : "Rawat Aktif"}</strong>.
+                  {viewingHistoryAdm.latest_pe_result && (
+                    <span>
+                      {" "}Skrining PE dievaluasi pada{" "}
+                      {new Date(viewingHistoryAdm.latest_pe_result.calculated_at).toLocaleTimeString("id-ID", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span>Cetak Lembar Ini</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingHistoryAdm(null)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MODAL: UBAH STATUS RAWAT & UNIT
