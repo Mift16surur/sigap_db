@@ -785,43 +785,8 @@ export function ShadcnAppShell({
               </div>
             </div>
 
-            {/* Sisi Kanan: Notifikasi, Theme Toggle & Dropdown User Profile */}
+            {/* Sisi Kanan: Notifikasi, Sync & Dropdown User Profile */}
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-              {/* Tombol Cepat Dark / Light Mode */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                title={isDark ? "Beralih ke Mode Terang (Light Mode)" : "Beralih ke Mode Gelap (Dark Mode)"}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-blue-300 dark:border-blue-700 bg-white dark:bg-[#0c183a] text-[#1d4ed8] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-              >
-                {isDark ? (
-                  <>
-                    <Sun className="h-4 w-4 text-amber-500 animate-in spin-in-180 duration-200" />
-                    <span className="hidden sm:inline font-bold">Terang</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-4 w-4 text-[#1d4ed8] animate-in spin-in-180 duration-200" />
-                    <span className="hidden sm:inline font-bold">Gelap</span>
-                  </>
-                )}
-              </button>
-
-              {/* Tombol Panduan Penggunaan */}
-              <button
-                type="button"
-                onClick={() => setActiveNav("USER_GUIDE")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                  activeNav === "USER_GUIDE"
-                    ? "bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] text-white border-transparent shadow-xs"
-                    : "border-blue-300 dark:border-blue-700 bg-white dark:bg-[#0c183a] text-[#1d4ed8] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50 shadow-xs hover:scale-[1.02] active:scale-[0.98]"
-                }`}
-                title="Buka Buku Panduan Penggunaan"
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                <span className="hidden md:inline">Panduan</span>
-              </button>
-
               {/* Tombol Sinkronisasi Data */}
               <button
                 type="button"
