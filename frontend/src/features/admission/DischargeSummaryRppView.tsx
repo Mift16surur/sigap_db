@@ -36,6 +36,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { apiRequest } from "@/services/api-client";
+import { DEFAULT_CLINICAL_SCREENING_CRITERIA } from "@/types";
 import type { SigapDatabase, ClinicalProtocol, RiskCategory } from "@/types";
 import { PatientInpatientHistoryModal } from "./PatientInpatientHistoryModal";
 
@@ -158,6 +159,7 @@ export function DischargeSummaryRppView({
   // Ambil butir faktor risiko Preeklamsia (PE) yang bernilai "YA" secara riil
   const pePositiveFactors = useMemo(() => {
     if (!activeDischarge) return [];
+    const criteriaList = db.master_catalog?.clinical_screening_criteria || DEFAULT_CLINICAL_SCREENING_CRITERIA;
     return db.screening_risk_details
       .filter(
         (d) => d.admission_id === activeDischarge.admission_id && d.pathway === "PE" && d.response === "YA"
@@ -166,25 +168,30 @@ export function DischargeSummaryRppView({
         const factor = db.risk_factors.find(
           (rf) => rf.risk_factor_id === d.risk_factor_id || rf.code === d.risk_factor_code
         );
+        const criterion = criteriaList.find(
+          (c) => c.criterion_id === d.risk_factor_code || c.criterion_id === d.risk_factor_id || c.label === d.risk_factor_code
+        );
         return {
           id: d.risk_detail_id,
-          code: d.risk_factor_code || factor?.code || "FR-PE",
-          label: factor?.label || d.risk_factor_code || d.risk_factor_id,
+          code: d.risk_factor_code || criterion?.criterion_id || factor?.code || "FR-PE",
+          label: criterion?.label || factor?.label || d.note || d.risk_factor_code || d.risk_factor_id,
           category:
-            factor?.risk_tier === "HIGH" ||
+            criterion?.risk_tier ||
+            (factor?.risk_tier === "HIGH" ||
             factor?.risk_tier === "CRITICAL_IMMEDIATE" ||
             factor?.domain_4t === "PE_HIGH_RISK"
               ? "HIGH"
-              : "MODERATE",
-          domain: d.domain,
+              : "MODERATE"),
+          domain: d.domain || criterion?.domain_id,
           note: d.note,
         };
       });
-  }, [activeDischarge, db.screening_risk_details, db.risk_factors]);
+  }, [activeDischarge, db.screening_risk_details, db.risk_factors, db.master_catalog?.clinical_screening_criteria]);
 
   // Ambil butir faktor risiko Perdarahan (HPP 4T) yang bernilai "YA" secara riil
   const hppPositiveFactors = useMemo(() => {
     if (!activeDischarge) return [];
+    const criteriaList = db.master_catalog?.clinical_screening_criteria || DEFAULT_CLINICAL_SCREENING_CRITERIA;
     return db.screening_risk_details
       .filter(
         (d) => d.admission_id === activeDischarge.admission_id && d.pathway === "HPP" && d.response === "YA"
@@ -193,16 +200,19 @@ export function DischargeSummaryRppView({
         const factor = db.risk_factors.find(
           (rf) => rf.risk_factor_id === d.risk_factor_id || rf.code === d.risk_factor_code
         );
+        const criterion = criteriaList.find(
+          (c) => c.criterion_id === d.risk_factor_code || c.criterion_id === d.risk_factor_id || c.label === d.risk_factor_code
+        );
         return {
           id: d.risk_detail_id,
-          code: d.risk_factor_code || factor?.code || "FR-HPP",
-          label: factor?.label || d.risk_factor_code || d.risk_factor_id,
-          category: factor?.risk_tier || "HIGH",
-          domain: d.domain || factor?.domain_4t || "TONUS",
+          code: d.risk_factor_code || criterion?.criterion_id || factor?.code || "FR-HPP",
+          label: criterion?.label || factor?.label || d.note || d.risk_factor_code || d.risk_factor_id,
+          category: criterion?.risk_tier || factor?.risk_tier || "HIGH",
+          domain: d.domain || criterion?.domain_id || factor?.domain_4t || "TONUS",
           note: d.note,
         };
       });
-  }, [activeDischarge, db.screening_risk_details, db.risk_factors]);
+  }, [activeDischarge, db.screening_risk_details, db.risk_factors, db.master_catalog?.clinical_screening_criteria]);
 
   // Riwayat Pengukuran Tekanan Darah Terakhir
   const latestBp = useMemo(() => {

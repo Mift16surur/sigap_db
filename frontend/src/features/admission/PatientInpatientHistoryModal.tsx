@@ -21,6 +21,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import type { SigapDatabase, ClinicalProtocol } from "@/types";
+import { DEFAULT_CLINICAL_SCREENING_CRITERIA } from "@/types";
 
 interface PatientInpatientHistoryModalProps {
   isOpen: boolean;
@@ -539,12 +540,18 @@ export function PatientInpatientHistoryModal({
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {pePositiveFactors.map((f, idx) => {
+                      const criteriaList = db.master_catalog?.clinical_screening_criteria || DEFAULT_CLINICAL_SCREENING_CRITERIA;
                       const factorName =
+                        criteriaList.find(
+                          (c) => c.criterion_id === f.risk_factor_code || c.criterion_id === f.risk_factor_id || c.label === f.risk_factor_code
+                        )?.label ||
                         db.risk_factors.find(
                           (rf) =>
                             rf.risk_factor_id === f.risk_factor_id ||
                             rf.code === f.risk_factor_code
-                        )?.label || f.risk_factor_code;
+                        )?.label ||
+                        f.note ||
+                        f.risk_factor_code;
                       return (
                         <div
                           key={`pe-${idx}`}
@@ -561,12 +568,18 @@ export function PatientInpatientHistoryModal({
                     })}
 
                     {hppPositiveFactors.map((f, idx) => {
+                      const criteriaList = db.master_catalog?.clinical_screening_criteria || DEFAULT_CLINICAL_SCREENING_CRITERIA;
                       const factorName =
+                        criteriaList.find(
+                          (c) => c.criterion_id === f.risk_factor_code || c.criterion_id === f.risk_factor_id || c.label === f.risk_factor_code
+                        )?.label ||
                         db.risk_factors.find(
                           (rf) =>
                             rf.risk_factor_id === f.risk_factor_id ||
                             rf.code === f.risk_factor_code
-                        )?.label || f.risk_factor_code;
+                        )?.label ||
+                        f.note ||
+                        f.risk_factor_code;
                       return (
                         <div
                           key={`hpp-${idx}`}

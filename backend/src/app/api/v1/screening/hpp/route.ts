@@ -258,6 +258,36 @@ export async function POST(req: Request) {
     }
   }
 
+  // Simpan / Perbarui Checklist Bundle SOP Tindakan Nakes yang telah dilaksanakan (DONE)
+  if (Array.isArray(body.executed_actions)) {
+    for (const exec of body.executed_actions) {
+      const existing = db.clinical_actions.find(
+        (a) =>
+          a.admission_id === admission_id &&
+          a.pathway === "HPP" &&
+          (a.action_code === exec.action_code || a.action_label === exec.action_label)
+      );
+      if (existing) {
+        existing.status = "DONE";
+        existing.performed_by = userId;
+        existing.performed_at = exec.performed_at || exec.executed_at || now;
+      } else {
+        db.clinical_actions.push({
+          action_id: `act-hpp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          admission_id,
+          pathway: "HPP",
+          action_code: exec.action_code || "HPP_CHECKLIST_ITEM",
+          action_label: exec.action_label,
+          category_context: result.category,
+          status: "DONE",
+          protocol_version_id: activeProtocol.protocol_version_id,
+          performed_by: userId,
+          performed_at: exec.performed_at || exec.executed_at || now,
+        });
+      }
+    }
+  }
+
   let generatedAlert: AlertRecord | null = null;
   if (result.priority_alert_triggered || result.category === "HIGH") {
     generatedAlert = {

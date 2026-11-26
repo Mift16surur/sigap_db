@@ -1,5 +1,6 @@
 import { SimplePdfDocument } from "./pdf-generator";
 import type { SigapDatabase, Admission } from "./types";
+import { DEFAULT_CLINICAL_SCREENING_CRITERIA } from "./types";
 
 export function generateClinicalSummaryPdf(db: SigapDatabase, admissionId: string): { pdfBuffer: Buffer; filename: string } {
   const adm = db.admissions.find((a) => a.admission_id === admissionId || a.admission_code === admissionId);
@@ -32,14 +33,16 @@ export function generateClinicalSummaryPdf(db: SigapDatabase, admissionId: strin
   const losString = diffDays > 0 ? `${diffDays} hari ${diffHours % 24} jam` : `${diffHours} jam`;
 
   // Faktor risiko teridentifikasi PE (Response === "YA")
+  const criteriaList = db.master_catalog?.clinical_screening_criteria || DEFAULT_CLINICAL_SCREENING_CRITERIA;
   const pePositiveFactors = db.screening_risk_details
     .filter((d) => d.admission_id === adm.admission_id && d.pathway === "PE" && d.response === "YA")
     .map((d) => {
       const factor = db.risk_factors.find((rf) => rf.risk_factor_id === d.risk_factor_id || rf.code === d.risk_factor_code);
+      const criterion = criteriaList.find((c) => c.criterion_id === d.risk_factor_code || c.criterion_id === d.risk_factor_id || c.label === d.risk_factor_code);
       return {
-        code: d.risk_factor_code || factor?.code || "FR-PE",
-        label: factor?.label || d.risk_factor_code || d.risk_factor_id,
-        tier: factor?.risk_tier === "HIGH" || factor?.risk_tier === "CRITICAL_IMMEDIATE" || factor?.domain_4t === "PE_HIGH_RISK" ? "HIGH" : "MODERATE",
+        code: d.risk_factor_code || criterion?.criterion_id || factor?.code || "FR-PE",
+        label: criterion?.label || factor?.label || d.note || d.risk_factor_code || d.risk_factor_id,
+        tier: criterion?.risk_tier || (factor?.risk_tier === "HIGH" || factor?.risk_tier === "CRITICAL_IMMEDIATE" || factor?.domain_4t === "PE_HIGH_RISK" ? "HIGH" : "MODERATE"),
         note: d.note,
       };
     });
@@ -49,10 +52,11 @@ export function generateClinicalSummaryPdf(db: SigapDatabase, admissionId: strin
     .filter((d) => d.admission_id === adm.admission_id && d.pathway === "HPP" && d.response === "YA")
     .map((d) => {
       const factor = db.risk_factors.find((rf) => rf.risk_factor_id === d.risk_factor_id || rf.code === d.risk_factor_code);
+      const criterion = criteriaList.find((c) => c.criterion_id === d.risk_factor_code || c.criterion_id === d.risk_factor_id || c.label === d.risk_factor_code);
       return {
-        code: d.risk_factor_code || factor?.code || "FR-HPP",
-        label: factor?.label || d.risk_factor_code || d.risk_factor_id,
-        domain: d.domain || factor?.domain_4t || "TONUS",
+        code: d.risk_factor_code || criterion?.criterion_id || factor?.code || "FR-HPP",
+        label: criterion?.label || factor?.label || d.note || d.risk_factor_code || d.risk_factor_id,
+        domain: d.domain || criterion?.domain_id || factor?.domain_4t || "TONUS",
         note: d.note,
       };
     });

@@ -46,6 +46,7 @@ import {
   DEFAULT_CLINICAL_SCREENING_CRITERIA,
 } from "@/types";
 import type {
+  ActionStatus,
   ClinicalItemResponse,
   ClinicalProtocol,
   Domain4T,
@@ -631,6 +632,23 @@ export function UnifiedClinicalScreeningView({
     });
 
     setResponses(initMap);
+
+    // Inisialisasi status Checklist Bundle Tindakan SOP dari database
+    const existingActions = (db.clinical_actions || []).filter(
+      (a) => a.admission_id === currentAdmission.admission_id && a.pathway === pathway
+    );
+    const initBundle: Record<string, { done: boolean; time?: string }> = {};
+    existingActions.forEach((act) => {
+      if (act.status === "DONE") {
+        const timeStr = act.performed_at
+          ? new Date(act.performed_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+          : undefined;
+        if (act.action_code) initBundle[act.action_code] = { done: true, time: timeStr };
+        if (act.action_label) initBundle[act.action_label] = { done: true, time: timeStr };
+      }
+    });
+    setBundleChecked(initBundle);
+
     setClinicalNotes(
       (activeInstrument === "HPP"
         ? currentAdmission.hpp_screening?.clinical_notes
@@ -639,7 +657,7 @@ export function UnifiedClinicalScreeningView({
     setTargetUnitId(currentAdmission.unit_id || db.units[0]?.unit_id || "");
     setSuccessMessage(null);
     setErrorMessage(null);
-  }, [currentAdmission?.admission_id, activeInstrument, db.screening_risk_details, hppMasters, peMasters]);
+  }, [currentAdmission?.admission_id, activeInstrument, db.screening_risk_details, db.clinical_actions, hppMasters, peMasters]);
 
   // Dynamic Screening Domains loaded from Master Data, filtered by activeInstrument and active status
   const activeScreeningDomains: ScreeningDomainGroup[] = useMemo(() => {
@@ -965,6 +983,15 @@ export function UnifiedClinicalScreeningView({
         : DEFAULT_CLINICAL_SCREENING_CRITERIA;
 
     try {
+      const executedActionsPayload = bundleItems
+        .filter((item) => bundleChecked[item.id]?.done || bundleChecked[item.title]?.done)
+        .map((item) => ({
+          action_code: item.id,
+          action_label: item.title,
+          status: "DONE" as ActionStatus,
+          performed_at: new Date().toISOString(),
+        }));
+
       if (activeInstrument === "HPP") {
         const formattedRiskDetails = Object.entries(responses).map(([rfId, val]) => {
           const crit = rawCriteriaList.find((c) => c.criterion_id === rfId);
@@ -1021,6 +1048,7 @@ export function UnifiedClinicalScreeningView({
             clinical_notes: clinicalNotes || "Skrining HPP berdasarkan 4T, Hb Anemia & Riwayat HPP.",
             risk_details: hppRiskDetails,
             labs: hppLabsPayload,
+            executed_actions: executedActionsPayload,
             duration_seconds: 60,
             is_preemptive: false,
           },
@@ -1149,6 +1177,7 @@ export function UnifiedClinicalScreeningView({
             symptoms: symptomsPayload,
             labs: labsPayload,
             risk_details: formattedRiskDetails,
+            executed_actions: executedActionsPayload,
             duration_seconds: 60,
             is_preemptive: false,
           },
@@ -2245,7 +2274,8 @@ export function UnifiedClinicalScreeningView({
           {/* Checklist Tindakan Klinis */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {bundleItems.map((item) => {
-              const isChecked = !!bundleChecked[item.id]?.done;
+              const isChecked = !!(bundleChecked[item.id]?.done || bundleChecked[item.title]?.done);
+              const checkedTime = bundleChecked[item.id]?.time || bundleChecked[item.title]?.time;
               return (
                 <div
                   key={item.id}
@@ -2254,6 +2284,7 @@ export function UnifiedClinicalScreeningView({
                     setBundleChecked((prev) => ({
                       ...prev,
                       [item.id]: { done: !isChecked, time: !isChecked ? now : undefined },
+                      [item.title]: { done: !isChecked, time: !isChecked ? now : undefined },
                     }));
                   }}
                   className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
@@ -2274,9 +2305,9 @@ export function UnifiedClinicalScreeningView({
                   <div className="space-y-0.5">
                     <div className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <span>{item.title}</span>
-                      {bundleChecked[item.id]?.time && (
+                      {checkedTime && (
                         <span className="text-[10px] text-emerald-600 font-semibold">
-                          ({bundleChecked[item.id]?.time})
+                          ({checkedTime})
                         </span>
                       )}
                     </div>
