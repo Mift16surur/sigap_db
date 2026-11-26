@@ -966,19 +966,7 @@ export function DischargeSummaryRppView({
                       <span className="text-slate-500 block text-[11px]">Kontak Darurat / HP:</span>
                       <span>{activeDischarge.patient?.kontak_darurat || "-"}</span>
                     </div>
-                    <div>
-                      <span className="text-slate-500 block text-[11px]">Penjamin / Cara Bayar:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">
-                        {activeDischarge.penjamin || "Umum / Pribadi"}
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[11px]">No. Kartu Asuransi/BPJS:</span>
-                      <span className="font-mono">
-                        {(activeDischarge as any).nomor_asuransi || (activeDischarge as any).nomor_bpjs || "-"}
-                      </span>
-                    </div>
-                    <div className="col-span-2 md:col-span-4">
+                    <div className="col-span-2">
                       <span className="text-slate-500 block text-[11px]">Alamat Domisili:</span>
                       <span className="text-slate-700 dark:text-slate-300">
                         {activeDischarge.patient?.alamat_singkat || "-"}

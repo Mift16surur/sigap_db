@@ -163,9 +163,8 @@ export function generateClinicalSummaryPdf(db: SigapDatabase, admissionId: strin
 
   // Baris 2
   doc.drawField("NIK", patient?.nik_masked || (patient as any)?.nik || "-", m + 8, startY1 + 34, colW);
-  doc.drawField("PENJAMIN / CARA BAYAR", adm.penjamin || "Umum / Pribadi", m + 8 + colW, startY1 + 34, colW);
-  doc.drawField("KONTAK DARURAT", patient?.kontak_darurat || "-", m + 8 + colW * 2, startY1 + 34, colW);
-  doc.drawField("ALAMAT DOMISILI", patient?.alamat_singkat || "-", m + 8 + colW * 3, startY1 + 34, colW);
+  doc.drawField("KONTAK DARURAT", patient?.kontak_darurat || "-", m + 8 + colW, startY1 + 34, colW);
+  doc.drawField("ALAMAT DOMISILI", patient?.alamat_singkat || "-", m + 8 + colW * 2, startY1 + 34, colW * 2);
 
   doc.currentY += 64;
 
