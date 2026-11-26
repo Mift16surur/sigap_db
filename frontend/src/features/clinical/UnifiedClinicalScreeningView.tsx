@@ -1201,19 +1201,21 @@ export function UnifiedClinicalScreeningView({
           : "RENDAH";
 
       if (activeInstrument === "PE") {
-        const msg = `Hasil Skrining Risiko PE berhasil disimpan (Kategori: ${riskLabelIndo})! Skrining Risiko HPP sekarang telah terbuka.`;
+        const msg = `Hasil Skrining Risiko PE berhasil disimpan (Kategori: ${riskLabelIndo})! Membuka Tahap 2: Skrining Risiko HPP...`;
         setSuccessMessage(msg);
         showToast(
-          "Rekam Medis Berhasil Disimpan!",
-          `Skrining Risiko PE untuk ${patientName} telah berhasil disimpan dengan kategori ${riskLabelIndo}. Tahap 2 (Skrining HPP) kini telah terbuka.`,
+          "Skrining PE Berhasil Disimpan!",
+          `Skrining Risiko PE untuk ${patientName} telah disimpan (${riskLabelIndo}). Lanjut ke Tahap 2 (Skrining Risiko HPP).`,
           "success"
         );
+        // Otomatis beralih ke Tahap 2 (HPP) agar pengkajian klinis berlanjut secara seamless
+        setActiveInstrument("HPP");
       } else {
-        const msg = `Hasil Skrining Risiko HPP berhasil disimpan ke Rekam Medis! Status risiko diperbarui: ${riskLabelIndo}.`;
+        const msg = `Hasil Skrining Risiko HPP berhasil disimpan ke Rekam Medis! Status risiko: ${riskLabelIndo}. Semua tahap skrining selesai.`;
         setSuccessMessage(msg);
         showToast(
-          "Rekam Medis Berhasil Disimpan!",
-          `Skrining Risiko HPP untuk ${patientName} berhasil dievaluasi dan diperbarui ke kategori ${riskLabelIndo}.`,
+          "Seluruh Skrining Selesai Disimpan!",
+          `Skrining Risiko HPP untuk ${patientName} berhasil disimpan (${riskLabelIndo}). Rekapitulasi skrining klinis telah lengkap.`,
           "success"
         );
       }
