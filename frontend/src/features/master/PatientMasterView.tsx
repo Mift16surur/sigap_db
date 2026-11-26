@@ -672,9 +672,12 @@ export function PatientMasterView({
               <thead className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 dark:from-[#091536] dark:via-[#0c1a45] dark:to-[#091536] text-[10px] font-black uppercase tracking-wider text-blue-900/80 dark:text-blue-300 border-b-2 border-blue-200/90 dark:border-blue-900/80">
                 <tr>
                   <th className="py-3 px-3.5">No. RM</th>
-                  <th className="py-3 px-3.5">Nama Pasien & NIK</th>
-                  <th className="py-3 px-3.5">Usia & Tgl Lahir</th>
-                  <th className="py-3 px-3.5">Gender & Gol. Darah</th>
+                  <th className="py-3 px-3.5">Nama Pasien</th>
+                  <th className="py-3 px-3.5">NIK</th>
+                  <th className="py-3 px-3.5">Usia</th>
+                  <th className="py-3 px-3.5">Tgl Lahir</th>
+                  <th className="py-3 px-3.5">Gender</th>
+                  <th className="py-3 px-3.5">Gol. Darah</th>
                   <th className="py-3 px-3.5">Alamat & Domisili</th>
                   <th className="py-3 px-3.5">Kontak / No. HP</th>
                   <th className="py-3 px-3.5">Status Kunjungan</th>
@@ -684,7 +687,7 @@ export function PatientMasterView({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {filteredPatients.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <td colSpan={11} className="py-12 text-center text-slate-400">
                       <Users className="h-8 w-8 mx-auto mb-2 opacity-30 text-blue-600" />
                       <p className="font-bold">Tidak ada data pasien yang sesuai kriteria pencarian</p>
                       <p className="text-[11px] mt-0.5">Silakan sesuaikan filter atau tambahkan pasien baru ke Master.</p>
@@ -705,37 +708,47 @@ export function PatientMasterView({
                           {pat.mrn}
                         </td>
 
-                        {/* NAMA PASIEN & NIK */}
-                        <td className="py-3 px-3.5">
+                        {/* NAMA PASIEN */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
                           <div className="font-black text-slate-900 dark:text-white uppercase tracking-tight">
                             {pat.full_name}
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            NIK: {pat.nik_masked || "-"}
+                        </td>
+
+                        {/* NIK */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                            {pat.nik_masked || "-"}
+                          </span>
+                        </td>
+
+                        {/* USIA */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {pat.age_years ? `${pat.age_years} Tahun` : "-"}
+                          </span>
+                        </td>
+
+                        {/* TGL LAHIR */}
+                        <td className="py-3 px-3.5 whitespace-nowrap">
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3 text-slate-400" />
+                            <span>{pat.tanggal_lahir ? formatIndoDate(pat.tanggal_lahir) : "-"}</span>
                           </div>
                         </td>
 
-                        {/* USIA & LAHIR */}
+                        {/* GENDER */}
                         <td className="py-3 px-3.5 whitespace-nowrap">
-                          <div className="font-bold text-slate-800 dark:text-slate-200">
-                            {pat.age_years} Tahun
-                          </div>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <Calendar className="h-2.5 w-2.5" />
-                            {pat.tanggal_lahir ? formatIndoDate(pat.tanggal_lahir) : "-"}
-                          </div>
+                          <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/80 uppercase">
+                            {pat.gender || "PEREMPUAN"}
+                          </span>
                         </td>
 
-                        {/* GENDER & GOL. DARAH */}
+                        {/* GOL. DARAH */}
                         <td className="py-3 px-3.5 whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/80">
-                              {pat.gender || "PEREMPUAN"}
-                            </span>
-                            <span className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80">
-                              {pat.golongan_darah || "O+"}
-                            </span>
-                          </div>
+                          <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80">
+                            {pat.golongan_darah || "-"}
+                          </span>
                         </td>
 
                         {/* ALAMAT & DOMISILI */}
