@@ -1052,20 +1052,24 @@ export function PatientRegistrationView({
             <table className="w-full text-left text-xs text-slate-700 dark:text-slate-200">
               <thead className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-blue-50/90 dark:from-[#091536] dark:via-[#0c1a45] dark:to-[#091536] text-[10px] font-black uppercase tracking-wider text-blue-950 dark:text-blue-300 border-b-2 border-blue-200/90 dark:border-blue-900/80">
                 <tr>
-                  <th className="py-3 px-3">No. Admisi / Waktu</th>
-                  <th className="py-3 px-3">Pasien & No. RM</th>
-                  <th className="py-3 px-3">Masuk Dari Mana</th>
+                  <th className="py-3 px-3">No. Admisi</th>
+                  <th className="py-3 px-3">Waktu Masuk</th>
+                  <th className="py-3 px-3">Nama Pasien</th>
+                  <th className="py-3 px-3">No. RM</th>
+                  <th className="py-3 px-3 text-center">Usia</th>
+                  <th className="py-3 px-3 text-center">GPA</th>
+                  <th className="py-3 px-3">Masuk Dari</th>
                   <th className="py-3 px-3">Diagnosa Awal</th>
                   <th className="py-3 px-3">Bidan / Penerima</th>
                   <th className="py-3 px-3">Hasil Skrining</th>
-                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-center">Status</th>
                   <th className="py-3 px-3 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {filteredAdmissions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <td colSpan={12} className="py-12 text-center text-slate-400">
                       <ClipboardPlus className="h-8 w-8 mx-auto mb-2 opacity-30 text-blue-600" />
                       <p className="font-bold">Tidak ada pendaftaran admisi yang sesuai filter</p>
                       <p className="text-[11px] mt-0.5">Gunakan formulir di atas untuk mendaftarkan pasien masuk RS.</p>
@@ -1084,25 +1088,47 @@ export function PatientRegistrationView({
                         key={adm.admission_id}
                         className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors"
                       >
-                        {/* NO. ADMISI / WAKTU */}
+                        {/* 1. NO. ADMISI */}
                         <td className="py-3 px-3 whitespace-nowrap">
-                          <div className="font-mono font-black text-blue-700 dark:text-blue-400">
+                          <span className="font-mono font-black text-blue-700 dark:text-blue-400">
                             {adm.admission_code}
-                          </div>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Clock className="h-2.5 w-2.5" />
-                            {formatIndoDateTime(adm.admission_date)}
+                          </span>
+                        </td>
+
+                        {/* 2. WAKTU MASUK */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium">
+                            <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span>{formatIndoDateTime(adm.admission_date)}</span>
                           </div>
                         </td>
 
-                        {/* PASIEN & NO. RM */}
-                        <td className="py-3 px-3">
+                        {/* 3. NAMA PASIEN */}
+                        <td className="py-3 px-3 whitespace-nowrap">
                           <div className="font-black text-slate-900 dark:text-white uppercase tracking-tight">
                             {pat?.full_name || "Pasien"}
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            No. RM: <strong className="text-blue-700 dark:text-blue-400">{pat?.mrn || "-"}</strong> • {pat?.age_years || "-"} th • G{adm.obstetric_history?.gravida ?? 1}P{adm.obstetric_history?.para ?? 0}A{adm.obstetric_history?.abortus ?? 0}
-                          </div>
+                        </td>
+
+                        {/* 4. NO. RM */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span className="font-mono font-black text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded border border-blue-200/60 dark:border-blue-800/60">
+                            {pat?.mrn || "-"}
+                          </span>
+                        </td>
+
+                        {/* 5. USIA */}
+                        <td className="py-3 px-3 whitespace-nowrap text-center">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {pat?.age_years ? `${pat.age_years} Th` : "-"}
+                          </span>
+                        </td>
+
+                        {/* 6. STATUS OBSTETRI (GPA) */}
+                        <td className="py-3 px-3 whitespace-nowrap text-center">
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            G{adm.obstetric_history?.gravida ?? 1}P{adm.obstetric_history?.para ?? 0}A{adm.obstetric_history?.abortus ?? 0}
+                          </span>
                         </td>
 
                         {/* MASUK DARI MANA (IGD / RAJAL) */}
