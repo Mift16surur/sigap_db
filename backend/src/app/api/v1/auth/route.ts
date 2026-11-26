@@ -5,10 +5,15 @@ import prisma from "@/core/database/prisma";
 import {
   appendAuditLog,
   getDb,
+  getDbAsync,
   resolveRequestUser,
   saveDb,
+  saveDbAsync,
   verifyRolePermission,
 } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { User, UserRole } from "@/lib/types";
 
 const JWT_SECRET =
@@ -48,7 +53,7 @@ async function hashPassword(plainText: string): Promise<string> {
 }
 
 export async function GET() {
-  const db = getDb();
+  const db = await getDbAsync();
   const safeUsers = db.users.map((u) => {
     const unit = db.units.find((un) => un.unit_id === u.unit_id);
     const roleDef = db.roles.find((r) => r.role_id === u.role_id);
@@ -70,7 +75,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const db = getDb();
+    const db = await getDbAsync();
     const body = await req.json();
     const { action } = body;
     const now = new Date().toISOString();
@@ -128,7 +133,7 @@ export async function POST(req: Request) {
         action: "BLOCKED_UNAUTHORIZED_ACTION",
         changeSummary: `Akses ditolak pada Portal Admin: Akun ${user.username} (${user.role_id}) bukan Administrator.`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json(
         {
           ok: false,
@@ -147,7 +152,7 @@ export async function POST(req: Request) {
         action: "BLOCKED_UNAUTHORIZED_ACTION",
         changeSummary: `Upaya login ditolak: Akun ${user.username} (${user.full_name}) berstatus NONAKTIF.`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json(
         {
           ok: false,
@@ -180,7 +185,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Login ${isAdminRole ? "Administrator" : "Klinisi"} berhasil: ${user.full_name} (@${user.username}) masuk sebagai role ${user.role_id} di unit ${unit?.name || "-"}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
 
     // Generate Signed JWT Token (RS256/HS256 compliant)
     const token = jwt.sign(
@@ -218,7 +223,7 @@ export async function POST(req: Request) {
       action: "UPDATE",
       changeSummary: `Logout sesi pengguna: ${user.full_name} (@${user.username}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true });
   }
 
@@ -298,7 +303,7 @@ export async function POST(req: Request) {
       changeSummary: `Menambahkan akun pengguna baru @${newUser.username} (${newUser.full_name}) dengan role RBAC ${newUser.role_id} (Password Bcrypt).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, user: newUser });
   }
 
@@ -392,7 +397,7 @@ export async function POST(req: Request) {
       changeSummary: `Memperbarui konfigurasi RBAC akun @${target.username} (${target.full_name}): ${changes.join(", ") || "Update profil"}.`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, user: target });
   }
 
@@ -448,7 +453,7 @@ export async function POST(req: Request) {
       changeSummary: `Menghapus akun pengguna @${deletedUser.username} (${deletedUser.full_name}, ${deletedUser.role_id}).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_user_id: targetId });
   }
 
@@ -493,7 +498,7 @@ export async function POST(req: Request) {
       changeSummary: `Pengguna @${user.username} (${user.full_name}) memperbarui kata sandi mandiri (Bcrypt).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, message: "Kata sandi berhasil diperbarui." });
   }
 
@@ -518,7 +523,7 @@ export async function POST(req: Request) {
       changeSummary: `Pengguna @${user.username} memperbarui data profil mandiri (${user.full_name}, ${user.title_credentials}).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, user });
   }
 
@@ -553,7 +558,7 @@ export async function POST(req: Request) {
       changeSummary: `Memperbarui izin akses menu untuk role ${role.name} (${role.role_id}).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, role });
   }
 

@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import {
   appendAuditLog,
   getDb,
+  getDbAsync,
   resolveRequestUser,
   saveDb,
+  saveDbAsync,
 } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import {
   ActionChecklistMaster,
   ChiefComplaintTemplate,
@@ -20,7 +25,7 @@ import {
 } from "@/lib/types";
 
 export async function GET() {
-  const db = getDb();
+  const db = await getDbAsync();
   return NextResponse.json({
     ok: true,
     master_catalog: db.master_catalog,
@@ -30,7 +35,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const db = getDb();
+  const db = await getDbAsync();
   const { userId } = resolveRequestUser(req, db);
   const body = await req.json();
   const { action } = body;
@@ -56,7 +61,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Dokter baru: ${newDoc.full_name} (${newDoc.specialty}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, doctor: newDoc });
   }
 
@@ -86,7 +91,7 @@ export async function POST(req: Request) {
       action: "UPDATE",
       changeSummary: `Memperbarui Master Dokter: ${updatedDoc.full_name}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, doctor: updatedDoc });
   }
 
@@ -104,7 +109,7 @@ export async function POST(req: Request) {
       action: "DELETE",
       changeSummary: `Menghapus Master Dokter: ${deleted.full_name}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.doctor_id });
   }
 
@@ -129,7 +134,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Bidan/Perawat baru: ${newStaff.full_name} (${newStaff.profession}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, staff: newStaff });
   }
 
@@ -161,7 +166,7 @@ export async function POST(req: Request) {
       action: "UPDATE",
       changeSummary: `Memperbarui Master Staf: ${updatedStaff.full_name}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, staff: updatedStaff });
   }
 
@@ -181,7 +186,7 @@ export async function POST(req: Request) {
       action: "DELETE",
       changeSummary: `Menghapus Master Staf: ${deleted.full_name}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.staff_id });
   }
 
@@ -203,7 +208,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Unit Pelayanan baru: ${newUnit.name} (${newUnit.code}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, unit: newUnit });
   }
 
@@ -230,7 +235,7 @@ export async function POST(req: Request) {
       action: "UPDATE",
       changeSummary: `Memperbarui Master Unit: ${updatedUnit.name} (${updatedUnit.code}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, unit: updatedUnit });
   }
 
@@ -249,7 +254,7 @@ export async function POST(req: Request) {
       action: "DELETE",
       changeSummary: `Menghapus Master Unit: ${deleted.name} (${deleted.code}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.unit_id });
   }
 
@@ -274,7 +279,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Fasilitas Perujuk baru: ${newRef.facility_name} (${newRef.district_city}, Kec. ${newRef.subdistrict}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, referral: newRef });
   }
 
@@ -309,7 +314,7 @@ export async function POST(req: Request) {
       action: "UPDATE",
       changeSummary: `Memperbarui Master Fasilitas Perujuk: ${updatedRef.facility_name} (${updatedRef.district_city}, Kec. ${updatedRef.subdistrict}).`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, referral: updatedRef });
   }
 
@@ -333,7 +338,7 @@ export async function POST(req: Request) {
       action: "DELETE",
       changeSummary: `Menghapus Master Fasilitas Perujuk: ${deleted.facility_name}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.referral_id });
   }
 
@@ -356,7 +361,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Template Keluhan Utama: ${newCc.label}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, complaint: newCc });
   }
 
@@ -377,7 +382,7 @@ export async function POST(req: Request) {
       active_status: body.active_status !== undefined ? Boolean(body.active_status) : old.active_status,
     };
     db.master_catalog.chief_complaints[ccIndex] = updatedCc;
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, complaint: updatedCc });
   }
 
@@ -390,7 +395,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Template tidak ditemukan" }, { status: 404 });
     }
     const deleted = db.master_catalog.chief_complaints.splice(ccIndex, 1)[0];
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.complaint_id });
   }
 
@@ -404,7 +409,7 @@ export async function POST(req: Request) {
       active_status: true,
     };
     db.master_catalog.comorbidity_templates.unshift(newCm);
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, comorbid: newCm });
   }
 
@@ -417,7 +422,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Komorbid tidak ditemukan" }, { status: 404 });
     }
     const deleted = db.master_catalog.comorbidity_templates.splice(cmIndex, 1)[0];
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.comorbid_id });
   }
 
@@ -444,7 +449,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Faktor Risiko [${newRf.screening_pathway} - ${newRf.domain_4t}]: ${newRf.label}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, risk_factor: newRf });
   }
 
@@ -465,7 +470,7 @@ export async function POST(req: Request) {
       active_status: body.active_status !== undefined ? Boolean(body.active_status) : old.active_status,
     };
     db.risk_factors[rfIndex] = updatedRf;
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, risk_factor: updatedRf });
   }
 
@@ -476,7 +481,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Faktor risiko tidak ditemukan" }, { status: 404 });
     }
     const deleted = db.risk_factors.splice(rfIndex, 1)[0];
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.risk_factor_id });
   }
 
@@ -516,7 +521,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Kriteria Skrining [${newCrit.domain_id} - ${newCrit.risk_tier}]: ${newCrit.label}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, criterion: newCrit });
   }
 
@@ -543,7 +548,7 @@ export async function POST(req: Request) {
       active_status: body.active_status !== undefined ? Boolean(body.active_status) : old.active_status,
     };
     db.master_catalog.clinical_screening_criteria[cIndex] = updatedCrit;
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, criterion: updatedCrit });
   }
 
@@ -559,7 +564,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Kriteria skrining tidak ditemukan" }, { status: 404 });
     }
     const deleted = db.master_catalog.clinical_screening_criteria.splice(cIndex, 1)[0];
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.criterion_id });
   }
 
@@ -575,7 +580,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: "Menyinkronkan 23 kriteria skrining standar ke Master Data.",
     });
-    saveDb(db);
+    await saveDbAsync(db);
     const criteriaList = db.master_catalog.clinical_screening_criteria || [];
     return NextResponse.json({
       ok: true,
@@ -609,7 +614,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: `Menambahkan Master Bundle [${newBundle.pathway} - ${newBundle.risk_category}]: ${newBundle.label}.`,
     });
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, checklist: newBundle });
   }
 
@@ -637,7 +642,7 @@ export async function POST(req: Request) {
       active_status: body.active_status !== undefined ? Boolean(body.active_status) : old.active_status,
     };
     db.master_catalog.action_checklist_masters[bIndex] = updatedBundle;
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, checklist: updatedBundle });
   }
 
@@ -653,7 +658,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Item bundle tidak ditemukan" }, { status: 404 });
     }
     const deleted = db.master_catalog.action_checklist_masters.splice(bIndex, 1)[0];
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, deleted_id: deleted.checklist_id });
   }
 
@@ -669,7 +674,7 @@ export async function POST(req: Request) {
       action: "CREATE",
       changeSummary: "Menyinkronkan 18 item bundle tindak lanjut standar ke Master Data.",
     });
-    saveDb(db);
+    await saveDbAsync(db);
     const bundles = db.master_catalog.action_checklist_masters || [];
     return NextResponse.json({
       ok: true,

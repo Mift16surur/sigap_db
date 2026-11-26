@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { getDb, resetDbToSeed } from "@/lib/store";
+import { getDb, getDbAsync, resetDbToSeed } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
-  const db = getDb();
+  const db = await getDbAsync();
   const activeProtocol =
     db.clinical_protocols.find((p) => p.status === "ACTIVE") ||
     db.clinical_protocols[0];

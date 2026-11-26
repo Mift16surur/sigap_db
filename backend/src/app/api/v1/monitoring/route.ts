@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import {
   appendAuditLog,
   getDb,
+  getDbAsync,
   resolveRequestUser,
   saveDb,
+  saveDbAsync,
   verifyRolePermission,
 } from "@/lib/store";
 import {
@@ -13,8 +15,11 @@ import {
   SbarReport,
 } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: Request) {
-  const db = getDb();
+  const db = await getDbAsync();
   const { userId, user } = resolveRequestUser(req, db);
   const body = await req.json();
   const { action, admission_id } = body;
@@ -110,7 +115,7 @@ export async function POST(req: Request) {
       changeSummary: `Mencatat monitoring tanda vital ${patient?.full_name} (TD ${sbp}/${dbp}, HR ${hr}, SI ${shockIndex}, Tonus: ${record.uterine_tonus}).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({
       ok: true,
       monitoring_record: record,
@@ -246,7 +251,7 @@ export async function POST(req: Request) {
       protocolVersionRef: activeProtocol.version,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({
       ok: true,
       blood_loss_record: record,
@@ -285,7 +290,7 @@ export async function POST(req: Request) {
       changeSummary: `Memperbarui status checklist '${item.action_label}' menjadi ${item.status}.`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, clinical_action: item });
   }
 
@@ -320,7 +325,7 @@ export async function POST(req: Request) {
       changeSummary: `Mengubah status Alert '${alert.title}' menjadi ${alert.status}.`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, alert });
   }
 
@@ -369,7 +374,7 @@ export async function POST(req: Request) {
       changeSummary: `Menyusun dan mengirim ringkasan SBAR terverifikasi untuk ${patient?.full_name} kepada ${sbar.recipient_doctor_name}.`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, sbar_report: sbar });
   }
 
@@ -398,7 +403,7 @@ export async function POST(req: Request) {
       changeSummary: `Dokter (${user.full_name}) mencatat evaluasi & umpan balik pada laporan SBAR ${sbar.sbar_id}.`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
     return NextResponse.json({ ok: true, sbar_report: sbar });
   }
 

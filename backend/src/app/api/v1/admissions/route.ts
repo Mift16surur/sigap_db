@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import {
   appendAuditLog,
   getDb,
+  getDbAsync,
   resolveRequestUser,
   saveDb,
+  saveDbAsync,
   verifyRolePermission,
 } from "@/lib/store";
 import {
@@ -15,9 +17,12 @@ import {
   PeSymptomRecord,
 } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: Request) {
   try {
-    const db = getDb();
+    const db = await getDbAsync();
     const { userId } = resolveRequestUser(req, db);
     const perm = verifyRolePermission(db, userId, "ADMISSION_WRITE");
     if (!perm.allowed) {
@@ -46,7 +51,7 @@ export async function POST(req: Request) {
         action: "UPDATE",
         changeSummary: `Menyelesaikan rawat inap / memulangkan pasien (${adm.admission_code}).`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json({
         ok: true,
         admission: adm,
@@ -71,7 +76,7 @@ export async function POST(req: Request) {
         action: "UPDATE",
         changeSummary: `Membatalkan kepulangan / mengaktifkan kembali episode admisi (${adm.admission_code}).`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json({
         ok: true,
         admission: adm,
@@ -96,7 +101,7 @@ export async function POST(req: Request) {
         action: "UPDATE",
         changeSummary: `Memperbarui status rawat admisi ${adm.admission_code} (Unit: ${adm.unit_id}).`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json({
         ok: true,
         admission: adm,
@@ -138,7 +143,7 @@ export async function POST(req: Request) {
         action: "UPDATE",
         changeSummary: `Memperbarui data pendaftaran admisi ${adm.admission_code}.`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json({
         ok: true,
         admission: adm,
@@ -172,7 +177,7 @@ export async function POST(req: Request) {
         action: "DELETE",
         changeSummary: `Membatalkan / menghapus pendaftaran admisi ${targetAdm.admission_code}.`,
       });
-      saveDb(db);
+      await saveDbAsync(db);
       return NextResponse.json({
         ok: true,
         deleted_id: targetAdm.admission_id,
@@ -404,7 +409,7 @@ export async function POST(req: Request) {
     changeSummary: `Membuat Episode Admisi baru ${newAdmission.admission_code} untuk pasien ${patient.full_name} (${patient.mrn}, UK ${newAdmission.usia_kehamilan_minggu} mgg ${newAdmission.usia_kehamilan_hari} hr).`,
   });
 
-  saveDb(db);
+  await saveDbAsync(db);
 
   return NextResponse.json({
     ok: true,

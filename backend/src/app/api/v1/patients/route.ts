@@ -2,14 +2,19 @@ import { NextResponse } from "next/server";
 import {
   appendAuditLog,
   getDb,
+  getDbAsync,
   resolveRequestUser,
   saveDb,
+  saveDbAsync,
   verifyRolePermission,
 } from "@/lib/store";
 import { Patient } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
-  const db = getDb();
+  const db = await getDbAsync();
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").toLowerCase().trim();
 
@@ -47,7 +52,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const db = getDb();
+    const db = await getDbAsync();
     const { userId } = resolveRequestUser(req, db);
     const perm = verifyRolePermission(db, userId, "PATIENT_WRITE");
     if (!perm.allowed) {
@@ -125,7 +130,7 @@ export async function POST(req: Request) {
       changeSummary: `Registrasi Master Pasien baru: ${newPatient.full_name} (No. RM: ${newPatient.mrn}, Kode: ${newPatient.patient_code}, Usia: ${newPatient.age_years} th).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
 
     return NextResponse.json(
       {
@@ -148,7 +153,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const db = getDb();
+    const db = await getDbAsync();
     const { userId } = resolveRequestUser(req, db);
     const perm = verifyRolePermission(db, userId, "PATIENT_WRITE");
     if (!perm.allowed) {
@@ -253,7 +258,7 @@ export async function PUT(req: Request) {
       changeSummary: `Pembaruan Master Pasien: ${updatedPatient.full_name} (${updatedPatient.mrn}, Kode: ${updatedPatient.patient_code}).`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
 
     return NextResponse.json({
       ok: true,
@@ -269,7 +274,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const db = getDb();
+    const db = await getDbAsync();
     const { userId } = resolveRequestUser(req, db);
     const perm = verifyRolePermission(db, userId, "PATIENT_WRITE");
     if (!perm.allowed) {
@@ -357,7 +362,7 @@ export async function DELETE(req: Request) {
       changeSummary: `Penghapusan Master Pasien: ${targetPatient.full_name} (${targetPatient.mrn}, Kode: ${targetPatient.patient_code}) beserta ${removedAdmissionIds.length} episode admisi terkait.`,
     });
 
-    saveDb(db);
+    await saveDbAsync(db);
 
     return NextResponse.json({
       ok: true,

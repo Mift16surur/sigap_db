@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import jwt from "jsonwebtoken";
+import prisma from "@/core/database/prisma";
 import { initialSigapDatabase } from "./seed-data";
 import {
   AuditLog,
@@ -111,6 +112,43 @@ export function getDb(): SigapDatabase {
 
 export const loadDb = getDb;
 
+export async function getDbAsync(): Promise<SigapDatabase> {
+  if (process.env.DATABASE_URL) {
+    try {
+      const rows: any = await prisma.$queryRawUnsafe(
+        `SELECT data FROM sigap_state_store WHERE id = 'current_state' LIMIT 1;`
+      );
+      if (rows && rows.length > 0 && rows[0].data) {
+        const pgDb = rows[0].data as SigapDatabase;
+        global.__SIGAP_MEM_DB__ = pgDb;
+        global.__SIGAP_CLEAN_VER__ = CLEAN_DB_SCHEMA_VERSION;
+        return pgDb;
+      }
+    } catch (err: any) {
+      console.warn("getDbAsync fallback to local file:", err?.message || err);
+    }
+  }
+  return getDb();
+}
+
+export async function saveDbAsync(db: SigapDatabase): Promise<void> {
+  saveDb(db);
+  if (process.env.DATABASE_URL) {
+    try {
+      const raw = JSON.stringify(db);
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO sigap_state_store (id, data, updated_at)
+         VALUES ('current_state', $1::jsonb, NOW())
+         ON CONFLICT (id) DO UPDATE
+         SET data = $1::jsonb, updated_at = NOW();`,
+        raw
+      );
+    } catch (err: any) {
+      console.warn("saveDbAsync PostgreSQL sync error:", err?.message || err);
+    }
+  }
+}
+
 export function saveDb(db: SigapDatabase): void {
   global.__SIGAP_MEM_DB__ = db;
   const filePath = resolveDataFilePath();
@@ -125,6 +163,22 @@ export function saveDb(db: SigapDatabase): void {
     } catch {
       // ignore
     }
+  }
+
+  // Jika ada DATABASE_URL, persist juga ke Supabase PostgreSQL
+  if (process.env.DATABASE_URL) {
+    const raw = JSON.stringify(db);
+    prisma
+      .$executeRawUnsafe(
+        `INSERT INTO sigap_state_store (id, data, updated_at)
+         VALUES ('current_state', $1::jsonb, NOW())
+         ON CONFLICT (id) DO UPDATE
+         SET data = $1::jsonb, updated_at = NOW();`,
+        raw
+      )
+      .catch((err: any) => {
+        console.warn("Background PostgreSQL sync warning:", err?.message || err);
+      });
   }
 }
 

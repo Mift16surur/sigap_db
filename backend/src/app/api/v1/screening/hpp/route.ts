@@ -3,8 +3,10 @@ import { evaluateHppScreening } from "@/lib/rule-engine";
 import {
   appendAuditLog,
   getDb,
+  getDbAsync,
   resolveRequestUser,
   saveDb,
+  saveDbAsync,
   verifyRolePermission,
 } from "@/lib/store";
 import {
@@ -19,8 +21,11 @@ import {
   ScreeningRiskDetail,
 } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: Request) {
-  const db = getDb();
+  const db = await getDbAsync();
   const { userId } = resolveRequestUser(req, db);
   const perm = verifyRolePermission(db, userId, "SCREENING_WRITE");
   if (!perm.allowed) {
@@ -328,7 +333,7 @@ export async function POST(req: Request) {
     protocolVersionRef: activeProtocol.version,
   });
 
-  saveDb(db);
+  await saveDbAsync(db);
 
   return NextResponse.json({
     ok: true,
