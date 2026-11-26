@@ -6,6 +6,7 @@
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 import jwt from "jsonwebtoken";
 import { initialSigapDatabase } from "./seed-data";
 import {
@@ -18,6 +19,11 @@ import {
 } from "./types";
 
 function resolveDataFilePath(): string {
+  // 1. Cek direktori /tmp (khusus lingkungan serverless Linux / Vercel jika sudah ada file state)
+  const tmpPath = path.join(os.tmpdir(), "sigap-db.json");
+  if (fs.existsSync(tmpPath)) return tmpPath;
+
+  // 2. Cek direktori project lokal
   const p1 = path.join(process.cwd(), "sigap-db.json");
   const p2 = path.join(process.cwd(), "backend", "sigap-db.json");
   if (fs.existsSync(p1)) return p1;
@@ -111,8 +117,14 @@ export function saveDb(db: SigapDatabase): void {
   try {
     fs.writeFileSync(filePath, JSON.stringify(db, null, 2), "utf-8");
   } catch {
-    // Di lingkungan Vercel Serverless, filesystem utama bersifat read-only;
-    // penyimpanan di global memory tetap berjalan selama instance hidup.
+    // Di lingkungan Vercel Serverless, filesystem utama project bersifat read-only.
+    // Lakukan fallback tulis ke direktori temporary os.tmpdir() yang memiliki izin write.
+    try {
+      const tmpPath = path.join(os.tmpdir(), "sigap-db.json");
+      fs.writeFileSync(tmpPath, JSON.stringify(db, null, 2), "utf-8");
+    } catch {
+      // ignore
+    }
   }
 }
 
