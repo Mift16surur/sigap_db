@@ -104,6 +104,82 @@ export async function POST(req: Request) {
       });
     }
 
+    // 0c. Aksi Edit / Perbarui Data Pendaftaran Admisi
+    if (body.action === "UPDATE_ADMISSION") {
+      const adm = db.admissions.find((a) => a.admission_id === body.admission_id);
+      if (!adm) {
+        return NextResponse.json({ ok: false, error: "Admisi tidak ditemukan" }, { status: 404 });
+      }
+      if (body.unit_id) {
+        adm.unit_id = body.unit_id;
+        const unitObj = db.units?.find((u) => u.unit_id === body.unit_id);
+        if (unitObj) adm.unit_name = unitObj.name;
+      }
+      if (body.diagnosa_rujukan !== undefined) adm.diagnosa_rujukan = body.diagnosa_rujukan;
+      if (body.keluhan_utama !== undefined) adm.keluhan_utama = body.keluhan_utama;
+      if (body.asal_rujukan !== undefined) adm.asal_rujukan = body.asal_rujukan;
+      if (body.referral_facility_name !== undefined) adm.referral_facility_name = body.referral_facility_name;
+      if (body.nomor_rujukan !== undefined) adm.nomor_rujukan = body.nomor_rujukan;
+      if (body.receiving_midwife_name !== undefined) adm.receiving_midwife_name = body.receiving_midwife_name;
+      if (body.attending_doctor_name !== undefined) adm.attending_doctor_name = body.attending_doctor_name;
+      if (body.attending_doctor_id !== undefined) adm.attending_doctor_id = body.attending_doctor_id;
+      if (body.obstetric_history) {
+        adm.obstetric_history = {
+          ...adm.obstetric_history,
+          ...body.obstetric_history,
+        };
+      }
+      if (body.penjamin !== undefined) adm.penjamin = body.penjamin;
+
+      appendAuditLog(db, {
+        userId,
+        entity: "admissions",
+        entityId: adm.admission_id,
+        action: "UPDATE",
+        changeSummary: `Memperbarui data pendaftaran admisi ${adm.admission_code}.`,
+      });
+      saveDb(db);
+      return NextResponse.json({
+        ok: true,
+        admission: adm,
+        message: "Data pendaftaran admisi berhasil diperbarui.",
+      });
+    }
+
+    // 0d. Aksi Hapus / Batal Pendaftaran Admisi
+    if (body.action === "DELETE_ADMISSION" || body.action === "CANCEL_ADMISSION") {
+      const admIndex = db.admissions.findIndex((a) => a.admission_id === body.admission_id);
+      if (admIndex === -1) {
+        return NextResponse.json({ ok: false, error: "Admisi tidak ditemukan" }, { status: 404 });
+      }
+      const targetAdm = db.admissions[admIndex];
+      db.admissions.splice(admIndex, 1);
+
+      // Bersihkan data relasi terkait admisi yang dibatalkan
+      db.pe_screenings = (db.pe_screenings || []).filter((s) => s.admission_id !== targetAdm.admission_id);
+      db.hpp_screenings = (db.hpp_screenings || []).filter((s) => s.admission_id !== targetAdm.admission_id);
+      db.screening_results = (db.screening_results || []).filter((r) => r.admission_id !== targetAdm.admission_id);
+      db.screening_risk_details = (db.screening_risk_details || []).filter((d) => d.admission_id !== targetAdm.admission_id);
+      db.clinical_actions = (db.clinical_actions || []).filter((a) => a.admission_id !== targetAdm.admission_id);
+      db.alerts = (db.alerts || []).filter((al) => al.admission_id !== targetAdm.admission_id);
+      db.bp_measurements = (db.bp_measurements || []).filter((b) => b.admission_id !== targetAdm.admission_id);
+      db.blood_loss_records = (db.blood_loss_records || []).filter((bl) => bl.admission_id !== targetAdm.admission_id);
+
+      appendAuditLog(db, {
+        userId,
+        entity: "admissions",
+        entityId: targetAdm.admission_id,
+        action: "DELETE",
+        changeSummary: `Membatalkan / menghapus pendaftaran admisi ${targetAdm.admission_code}.`,
+      });
+      saveDb(db);
+      return NextResponse.json({
+        ok: true,
+        deleted_id: targetAdm.admission_id,
+        message: `Pendaftaran admisi ${targetAdm.admission_code} berhasil dibatalkan / dihapus.`,
+      });
+    }
+
   // 1. Buat atau gunakan pasien yang sudah ada (FR-03)
   let patient: Patient | undefined = db.patients.find(
     (p) => p.patient_id === body.patient_id || (body.mrn && p.mrn === body.mrn)

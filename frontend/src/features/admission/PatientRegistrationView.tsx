@@ -19,6 +19,7 @@ import {
   Hospital,
   LayoutGrid,
   List,
+  Loader2,
   MapPin,
   Pencil,
   Phone,
@@ -87,6 +88,25 @@ export function PatientRegistrationView({
   const [quickAlamat, setQuickAlamat] = useState<string>("");
   const [quickKontak, setQuickKontak] = useState<string>("");
   const [quickSubmitting, setQuickSubmitting] = useState<boolean>(false);
+
+  // STATE MODAL EDIT ADMISI MASUK
+  const [editingAdmission, setEditingAdmission] = useState<EnrichedAdmission | null>(null);
+  const [editUnitMasuk, setEditUnitMasuk] = useState<string>("unit-igd-ponek");
+  const [editDiagnosaRujukan, setEditDiagnosaRujukan] = useState<string>("");
+  const [editKeluhanUtama, setEditKeluhanUtama] = useState<string>("");
+  const [editGravida, setEditGravida] = useState<number>(1);
+  const [editPara, setEditPara] = useState<number>(0);
+  const [editAbortus, setEditAbortus] = useState<number>(0);
+  const [editMidwifeName, setEditMidwifeName] = useState<string>("");
+  const [editDoctorName, setEditDoctorName] = useState<string>("");
+  const [editAsalRujukan, setEditAsalRujukan] = useState<string>("Rujukan Puskesmas");
+  const [editFaskesPerujuk, setEditFaskesPerujuk] = useState<string>("");
+  const [editNomorRujukan, setEditNomorRujukan] = useState<string>("");
+  const [editSubmitting, setEditSubmitting] = useState<boolean>(false);
+
+  // STATE MODAL HAPUS / BATAL ADMISI MASUK
+  const [deletingAdmission, setDeletingAdmission] = useState<EnrichedAdmission | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState<boolean>(false);
 
   // FORMULIR PENDAFTARAN PASIEN MASUK STATE
   // 1. Pilih Pasien dari Master Pasien
@@ -337,6 +357,86 @@ export function PatientRegistrationView({
       setErrorMsg(err.message || "Gagal membuat pasien baru.");
     } finally {
       setQuickSubmitting(false);
+    }
+  }
+
+  // Buka Modal Edit Admisi Masuk
+  function handleOpenEditModal(adm: EnrichedAdmission) {
+    setEditingAdmission(adm);
+    setEditUnitMasuk(adm.unit_id || "unit-igd-ponek");
+    setEditDiagnosaRujukan(adm.diagnosa_rujukan || "");
+    setEditKeluhanUtama(adm.keluhan_utama || "");
+    setEditGravida(adm.obstetric_history?.gravida ?? 1);
+    setEditPara(adm.obstetric_history?.para ?? 0);
+    setEditAbortus(adm.obstetric_history?.abortus ?? 0);
+    setEditMidwifeName(adm.receiving_midwife_name || "bd. Hasta (Bidan Jaga)");
+    setEditDoctorName(adm.attending_doctor_name || "dr. Hepta, Sp.OG");
+    setEditAsalRujukan(adm.asal_rujukan || "Rujukan Puskesmas");
+    setEditFaskesPerujuk(adm.referral_facility_name || "");
+    setEditNomorRujukan(adm.nomor_rujukan || "");
+  }
+
+  // Simpan Perubahan Data Admisi Masuk
+  async function handleSaveEditAdmission(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingAdmission) return;
+    setEditSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await apiRequest("/admissions", {
+        method: "POST",
+        userId: currentUserId,
+        body: {
+          action: "UPDATE_ADMISSION",
+          admission_id: editingAdmission.admission_id,
+          unit_id: editUnitMasuk,
+          diagnosa_rujukan: editDiagnosaRujukan.trim() || undefined,
+          keluhan_utama: editKeluhanUtama.trim() || undefined,
+          obstetric_history: {
+            gravida: Number(editGravida) || 1,
+            para: Number(editPara) || 0,
+            abortus: Number(editAbortus) || 0,
+          },
+          receiving_midwife_name: editMidwifeName.trim() || undefined,
+          attending_doctor_name: editDoctorName.trim() || undefined,
+          asal_rujukan: editAsalRujukan,
+          referral_facility_name: editFaskesPerujuk.trim() || undefined,
+          nomor_rujukan: editNomorRujukan.trim() || undefined,
+        },
+      });
+      if (!res.ok) throw new Error(res.error || "Gagal memperbarui data pendaftaran admisi");
+      setFeedbackMsg(`Data pendaftaran ${editingAdmission.admission_code} (${editingAdmission.patient?.full_name}) berhasil diperbarui.`);
+      setEditingAdmission(null);
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Gagal memperbarui data pendaftaran admisi.");
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  // Konfirmasi Batal / Hapus Pendaftaran Admisi
+  async function handleConfirmDeleteAdmission() {
+    if (!deletingAdmission) return;
+    setDeleteSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await apiRequest("/admissions", {
+        method: "POST",
+        userId: currentUserId,
+        body: {
+          action: "DELETE_ADMISSION",
+          admission_id: deletingAdmission.admission_id,
+        },
+      });
+      if (!res.ok) throw new Error(res.error || "Gagal membatalkan pendaftaran admisi");
+      setFeedbackMsg(`Pendaftaran admisi ${deletingAdmission.admission_code} (${deletingAdmission.patient?.full_name}) berhasil dibatalkan / dihapus.`);
+      setDeletingAdmission(null);
+      await onRefresh();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Gagal membatalkan pendaftaran admisi.");
+    } finally {
+      setDeleteSubmitting(false);
     }
   }
 
@@ -1219,6 +1319,26 @@ export function PatientRegistrationView({
                                 <span className="hidden sm:inline">Monitoring</span>
                               </button>
                             )}
+
+                            {/* TOMBOL EDIT ADMISI */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(adm)}
+                              className="p-1.5 rounded-xl border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors shadow-2xs"
+                              title="Edit Data Pendaftaran Admisi"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* TOMBOL HAPUS / BATAL ADMISI */}
+                            <button
+                              type="button"
+                              onClick={() => setDeletingAdmission(adm)}
+                              className="p-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-2xs"
+                              title="Hapus / Batalkan Pendaftaran Admisi"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1397,6 +1517,290 @@ export function PatientRegistrationView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDIT DATA PENDAFTARAN ADMISI */}
+      {editingAdmission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Pencil className="h-5 w-5 text-blue-600" />
+                  Edit Data Pendaftaran Admisi
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  No. Admisi: <span className="font-mono font-bold text-blue-600">{editingAdmission.admission_code}</span> &bull; {editingAdmission.patient?.full_name} (RM {editingAdmission.patient?.mrn})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAdmission(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAdmission} className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Unit Masuk / Ruang Perawatan *
+                  </label>
+                  <select
+                    value={editUnitMasuk}
+                    onChange={(e) => setEditUnitMasuk(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm font-medium"
+                    required
+                  >
+                    <option value="unit-igd-ponek">IGD Obstetri / PONEK 24 Jam</option>
+                    <option value="unit-vk">Kamar Bersalin (VK)</option>
+                    <option value="unit-icu-kebidanan">ICU / HCU Kebidanan</option>
+                    <option value="unit-nifas">Ruang Rawat Inap Nifas</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Asal Rujukan *
+                  </label>
+                  <select
+                    value={editAsalRujukan}
+                    onChange={(e) => setEditAsalRujukan(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm font-medium"
+                    required
+                  >
+                    <option value="Datang Sendiri">Datang Sendiri / Non-Rujukan</option>
+                    <option value="Rujukan Puskesmas">Rujukan Puskesmas</option>
+                    <option value="Rujukan Klinik Pratama">Rujukan Klinik Pratama</option>
+                    <option value="Rujukan Praktik Mandiri Bidan (PMB)">Rujukan PMB</option>
+                    <option value="Rujukan RS Lain">Rujukan RS Lain</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Nama Faskes Perujuk
+                  </label>
+                  <input
+                    type="text"
+                    value={editFaskesPerujuk}
+                    onChange={(e) => setEditFaskesPerujuk(e.target.value)}
+                    placeholder="Contoh: Puskesmas Banyumas"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Nomor Surat Rujukan
+                  </label>
+                  <input
+                    type="text"
+                    value={editNomorRujukan}
+                    onChange={(e) => setEditNomorRujukan(e.target.value)}
+                    placeholder="Contoh: 440/123/PKM/2026"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Diagnosa Awal / Rujukan
+                </label>
+                <input
+                  type="text"
+                  value={editDiagnosaRujukan}
+                  onChange={(e) => setEditDiagnosaRujukan(e.target.value)}
+                  placeholder="Contoh: Inpartu kala I fase aktif, susp. PEB"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Keluhan Utama
+                </label>
+                <textarea
+                  rows={2}
+                  value={editKeluhanUtama}
+                  onChange={(e) => setEditKeluhanUtama(e.target.value)}
+                  placeholder="Keluhan utama saat pasien datang..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Riwayat Obstetri (G - P - A)
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">Gravida (G)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={editGravida}
+                      onChange={(e) => setEditGravida(Number(e.target.value) || 1)}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm font-bold text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">Para (P)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={editPara}
+                      onChange={(e) => setEditPara(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm font-bold text-center"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">Abortus (A)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={editAbortus}
+                      onChange={(e) => setEditAbortus(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm font-bold text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Bidan / Perawat Penerima
+                  </label>
+                  <input
+                    type="text"
+                    value={editMidwifeName}
+                    onChange={(e) => setEditMidwifeName(e.target.value)}
+                    placeholder="Nama bidan jaga"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Dokter DPJP
+                  </label>
+                  <input
+                    type="text"
+                    value={editDoctorName}
+                    onChange={(e) => setEditDoctorName(e.target.value)}
+                    placeholder="Nama dokter Sp.OG"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingAdmission(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md disabled:opacity-50 transition-colors"
+                >
+                  {editSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    "Simpan Perubahan"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI BATAL / HAPUS PENDAFTARAN ADMISI */}
+      {deletingAdmission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="p-3 bg-rose-100 dark:bg-rose-950/50 text-rose-600 rounded-2xl">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
+                  Batalkan Pendaftaran Pasien?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Tindakan ini tidak dapat diurungkan
+                </p>
+              </div>
+            </div>
+
+            <div className="my-4 text-xs text-slate-600 dark:text-slate-300 space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+              <div>
+                <span className="text-slate-400">No. Admisi:</span>{" "}
+                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {deletingAdmission.admission_code}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400">Nama Pasien:</span>{" "}
+                <span className="font-bold text-slate-800 dark:text-slate-200">
+                  {deletingAdmission.patient?.full_name}
+                </span>{" "}
+                (RM: {deletingAdmission.patient?.mrn})
+              </div>
+              <div>
+                <span className="text-slate-400">Unit:</span>{" "}
+                <span>{deletingAdmission.unit_name || deletingAdmission.unit_id}</span>
+              </div>
+              <p className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl mt-2 border border-amber-200 dark:border-amber-900/50">
+                ⚠️ Catatan: Data pendaftaran ini beserta riwayat skrining klinis dan monitoring terkait admisi ini akan dihapus dari daftar pelayanan aktif.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingAdmission(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteAdmission}
+                disabled={deleteSubmitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md disabled:opacity-50 transition-colors"
+              >
+                {deleteSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Ya, Hapus Pendaftaran</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
