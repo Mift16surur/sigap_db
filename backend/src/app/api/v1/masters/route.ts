@@ -485,15 +485,27 @@ export async function POST(req: Request) {
     if (!db.master_catalog.clinical_screening_criteria) {
       db.master_catalog.clinical_screening_criteria = [];
     }
+    const DOMAIN_BASE_ORDER: Record<string, number> = {
+      DOMAIN_MATERNAL: 100,
+      DOMAIN_OBSTETRI: 200,
+      DOMAIN_JANIN: 300,
+      DOMAIN_KOMBINASI: 400,
+    };
+    const domainKey = body.domain_id || "DOMAIN_MATERNAL";
+    const sameDomainCount = db.master_catalog.clinical_screening_criteria.filter(
+      (c) => c.domain_id === domainKey
+    ).length;
+    const autoSortOrder = (DOMAIN_BASE_ORDER[domainKey] || 500) + sameDomainCount + 1;
+
     const newCrit: ClinicalScreeningCriterionMaster = {
       criterion_id: body.criterion_id || `crit_${Date.now()}`,
-      domain_id: body.domain_id || "DOMAIN_MATERNAL",
+      domain_id: domainKey,
       label: body.label,
       risk_tier: body.risk_tier || "MODERATE",
       pathway: body.pathway || "ALL",
       category_note: body.category_note || "-",
       active_status: body.active_status !== undefined ? Boolean(body.active_status) : true,
-      sort_order: Number(body.sort_order || db.master_catalog.clinical_screening_criteria.length + 1),
+      sort_order: Number(body.sort_order) || autoSortOrder,
     };
     db.master_catalog.clinical_screening_criteria.push(newCrit);
 

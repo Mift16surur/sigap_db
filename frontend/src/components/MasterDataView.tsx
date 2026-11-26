@@ -172,7 +172,6 @@ export function MasterDataView({
   const [critRiskTier, setCritRiskTier] = useState<RiskCategory>("MODERATE");
   const [critPathway, setCritPathway] = useState<"ALL" | "PE" | "HPP">("ALL");
   const [critCategoryNote, setCritCategoryNote] = useState<string>("");
-  const [critSortOrder, setCritSortOrder] = useState<number>(1);
   const [critActiveStatus, setCritActiveStatus] = useState<boolean>(true);
 
   // Filter & Search Master Kriteria
@@ -223,9 +222,18 @@ export function MasterDataView({
   }
 
   // Action Handlers for Screening Criteria
+  const DOMAIN_TABLE_ORDER: Record<string, number> = {
+    DOMAIN_MATERNAL: 1,
+    DOMAIN_OBSTETRI: 2,
+    DOMAIN_JANIN: 3,
+    DOMAIN_KOMBINASI: 4,
+  };
+
   async function handleAddCriterion(e: React.FormEvent) {
     e.preventDefault();
     if (!critLabel.trim()) return;
+    const sameDomainCount = allCriteria.filter((c) => c.domain_id === critDomain).length;
+    const autoSortOrder = (DOMAIN_TABLE_ORDER[critDomain] || 1) * 100 + sameDomainCount + 1;
     await postMasterAction(
       {
         action: "ADD_SCREENING_CRITERION_MASTER",
@@ -234,19 +242,19 @@ export function MasterDataView({
         risk_tier: critRiskTier,
         pathway: critPathway,
         category_note: critCategoryNote.trim() || "-",
-        sort_order: Number(critSortOrder) || (catalog.clinical_screening_criteria?.length || 0) + 1,
+        sort_order: autoSortOrder,
         active_status: critActiveStatus,
       },
       `Kriteria '${critLabel}' berhasil ditambahkan ke Master Skrining Klinis.`
     );
     setCritLabel("");
     setCritCategoryNote("");
-    setCritSortOrder((catalog.clinical_screening_criteria?.length || 0) + 2);
   }
 
   async function handleUpdateCriterion(e: React.FormEvent) {
     e.preventDefault();
     if (!editingCrit) return;
+    const domainWeight = DOMAIN_TABLE_ORDER[editingCrit.domain_id] || 1;
     await postMasterAction(
       {
         action: "UPDATE_SCREENING_CRITERION_MASTER",
@@ -256,7 +264,7 @@ export function MasterDataView({
         risk_tier: editingCrit.risk_tier,
         pathway: editingCrit.pathway,
         category_note: editingCrit.category_note,
-        sort_order: Number(editingCrit.sort_order),
+        sort_order: editingCrit.sort_order || domainWeight * 100,
         active_status: editingCrit.active_status,
       },
       `Kriteria '${editingCrit.label}' berhasil diperbarui.`
@@ -773,31 +781,17 @@ export function MasterDataView({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
-                      5. Kategori Medis
-                    </label>
-                    <input
-                      type="text"
-                      value={critCategoryNote}
-                      onChange={(e) => setCritCategoryNote(e.target.value)}
-                      placeholder="Misal: Tanda Vital / 4T Tonus"
-                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
-                      6. Urutan Tampil
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={critSortOrder}
-                      onChange={(e) => setCritSortOrder(Number(e.target.value))}
-                      className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-2.5 py-2 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                    5. Kategori Medis
+                  </label>
+                  <input
+                    type="text"
+                    value={critCategoryNote}
+                    onChange={(e) => setCritCategoryNote(e.target.value)}
+                    placeholder="Misal: Tanda Vital / 4T Tonus / Riwayat Medis"
+                    className="w-full rounded-xl border border-blue-200 dark:border-blue-800 px-3 py-2 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
@@ -903,7 +897,12 @@ export function MasterDataView({
                           }
                           return true;
                         })
-                        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                        .sort((a, b) => {
+                          const domainA = DOMAIN_TABLE_ORDER[a.domain_id] || 99;
+                          const domainB = DOMAIN_TABLE_ORDER[b.domain_id] || 99;
+                          if (domainA !== domainB) return domainA - domainB;
+                          return (a.sort_order || 0) - (b.sort_order || 0);
+                        })
                         .map((c, idx) => {
                         const domainLabel =
                           c.domain_id === "DOMAIN_MATERNAL"
@@ -932,8 +931,8 @@ export function MasterDataView({
 
                         return (
                           <tr key={c.criterion_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                            <td className="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500">
-                              {c.sort_order || idx + 1}
+                            <td className="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500 font-bold">
+                              {idx + 1}
                             </td>
                             <td className="py-2.5 px-3">
                               <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${domainColor}`}>
@@ -3276,39 +3275,21 @@ export function MasterDataView({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Kategori Medis
-                  </label>
-                  <input
-                    type="text"
-                    value={editingCrit.category_note || ""}
-                    onChange={(e) =>
-                      setEditingCrit({
-                        ...editingCrit,
-                        category_note: e.target.value,
-                      })
-                    }
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Urutan Tampil
-                  </label>
-                  <input
-                    type="number"
-                    value={editingCrit.sort_order || 1}
-                    onChange={(e) =>
-                      setEditingCrit({
-                        ...editingCrit,
-                        sort_order: Number(e.target.value),
-                      })
-                    }
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono focus:border-[#2563eb] outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Kategori Medis
+                </label>
+                <input
+                  type="text"
+                  value={editingCrit.category_note || ""}
+                  onChange={(e) =>
+                    setEditingCrit({
+                      ...editingCrit,
+                      category_note: e.target.value,
+                    })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:border-[#2563eb] outline-none"
+                />
               </div>
 
               <div className="flex items-center gap-2 pt-1">
