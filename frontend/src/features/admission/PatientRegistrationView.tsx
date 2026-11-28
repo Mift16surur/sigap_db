@@ -585,7 +585,7 @@ export function PatientRegistrationView({
         <div className="rounded-2xl border-2 border-emerald-200/90 dark:border-emerald-900/80 bg-white dark:bg-[#0c183a] p-3.5 shadow-[0_4px_20px_rgba(20,160,100,0.06)] flex items-center justify-between">
           <div>
             <div className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              Sedang Diskrining
+              Pasien Baru Skrining
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               {activeCount}
@@ -638,15 +638,9 @@ export function PatientRegistrationView({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-black tracking-tight">
-                  Pendaftaran Pasien & Admisi Masuk (FR-04)
+                  Pendaftaran Pasien
                 </h3>
-                <span className="px-2 py-0.5 rounded-md bg-white/20 text-[10px] font-black uppercase tracking-wider">
-                  Kedatangan RS
-                </span>
               </div>
-              <p className="text-[11px] text-blue-100 mt-0.5">
-                Mendaftarkan pasien masuk RS: pilih pasien dari Master Pasien, catat unit masuk (VK IGD, Poli, dll), asal rujukan (Puskesmas, Bidan Mandiri, Datang Sendiri), penjamin, DPJP, keluhan, dan data kehamilan.
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

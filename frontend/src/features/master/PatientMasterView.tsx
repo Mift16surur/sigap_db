@@ -463,11 +463,11 @@ export function PatientMasterView({
           </div>
         </div>
 
-        {/* KARTU 4: SEDANG DISKRINING AKTIF */}
+        {/* KARTU 4: PASIEN BARU SKRINING */}
         <div className="rounded-2xl border-2 border-emerald-200/90 dark:border-emerald-900/80 bg-white dark:bg-[#0c183a] p-3.5 shadow-[0_4px_20px_rgba(20,160,100,0.06)] flex items-center justify-between">
           <div>
             <div className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              Sedang Diskrining
+              Pasien Baru Skrining
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               {activeCareCount}
@@ -523,9 +523,6 @@ export function PatientMasterView({
               <Users className="h-5 w-5 text-blue-600" />
               Master Data Pasien SIGAP App
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Basis data induk identitas pasien permanen (No. RM, NIK, Nama, Usia, Gol. Darah, Alamat). Klik <strong>"Daftarkan Admisi"</strong> untuk mendaftarkan kedatangan pasien masuk RS.
-            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
