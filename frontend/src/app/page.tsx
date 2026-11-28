@@ -191,6 +191,155 @@ export default function SigapApplicationPage() {
     }
   }
 
+  // Pembatasan Menu Berdasarkan Role RBAC Aktif (FR-02 & SRS Bab 3)
+  const ROLE_ALLOWED_MENUS: Record<string, NavSection[]> = {
+    BIDAN_PERAWAT: [
+      "DASHBOARD",
+      "PATIENT_MASTER",
+      "PATIENT_REGISTRATION",
+      "ADMISSION_INPUT",
+      "PATIENT_DISCHARGE_RPP",
+      "CLINICAL_SCREENING",
+      "PE_SCREENING",
+      "HPP_SCREENING",
+      "MONITORING_SBAR",
+      "MASTER_DATA",
+      "USER_GUIDE",
+    ],
+    DOKTER: [
+      "DASHBOARD",
+      "PATIENT_MASTER",
+      "PATIENT_REGISTRATION",
+      "ADMISSION_INPUT",
+      "PATIENT_DISCHARGE_RPP",
+      "CLINICAL_SCREENING",
+      "PE_SCREENING",
+      "HPP_SCREENING",
+      "MONITORING_SBAR",
+      "MASTER_DATA",
+      "USER_GUIDE",
+    ],
+    VALIDATOR_KLINIS: [
+      "DASHBOARD",
+      "PATIENT_MASTER",
+      "PATIENT_DISCHARGE_RPP",
+      "CLINICAL_SCREENING",
+      "PE_SCREENING",
+      "HPP_SCREENING",
+      "MONITORING_SBAR",
+      "PROTOCOL_AUDIT",
+      "MASTER_DATA",
+      "USER_GUIDE",
+    ],
+    ADMIN_RS: [
+      "DASHBOARD",
+      "PATIENT_MASTER",
+      "PATIENT_REGISTRATION",
+      "ADMISSION_INPUT",
+      "PATIENT_DISCHARGE_RPP",
+      "CLINICAL_SCREENING",
+      "PE_SCREENING",
+      "HPP_SCREENING",
+      "MONITORING_SBAR",
+      "PROTOCOL_AUDIT",
+      "MASTER_DATA",
+      "RBAC_MANAGEMENT",
+      "USER_GUIDE",
+    ],
+    ADMIN_TI: [
+      "DASHBOARD",
+      "PATIENT_MASTER",
+      "PATIENT_REGISTRATION",
+      "ADMISSION_INPUT",
+      "PATIENT_DISCHARGE_RPP",
+      "CLINICAL_SCREENING",
+      "PE_SCREENING",
+      "HPP_SCREENING",
+      "MONITORING_SBAR",
+      "PROTOCOL_AUDIT",
+      "MASTER_DATA",
+      "RBAC_MANAGEMENT",
+      "USER_GUIDE",
+    ],
+  };
+
+  const currentUser = useMemo(() => {
+    const users = data?.db?.users || [];
+    return (
+      users.find((u) => u.user_id === currentUserId) ||
+      users[0] || {
+        user_id: "usr-admin",
+        username: "admin",
+        full_name: "Administrator Sistem",
+        role_id: "ADMIN_RS",
+        status: "ACTIVE",
+      }
+    );
+  }, [data?.db?.users, currentUserId]);
+
+  const currentRoleDef = useMemo(() => {
+    const roles = data?.db?.roles || [];
+    return roles.find((r) => r.role_id === currentUser.role_id);
+  }, [data?.db?.roles, currentUser.role_id]);
+
+  // Ambil izin menu secara dinamis dari database (RBAC) jika sudah dikonfigurasi melalui menu Hak Akses
+  const isDynamicPermissionsConfigured = Boolean(
+    currentRoleDef?.permissions &&
+      Array.isArray(currentRoleDef.permissions) &&
+      currentRoleDef.permissions.length > 0 &&
+      currentRoleDef.permissions.some((p) =>
+        [
+          "DASHBOARD",
+          "PATIENT_MASTER",
+          "PATIENT_REGISTRATION",
+          "CLINICAL_SCREENING",
+          "MONITORING_SBAR",
+          "PATIENT_DISCHARGE_RPP",
+          "MASTER_DATA",
+          "PROTOCOL_AUDIT",
+          "RBAC_MANAGEMENT",
+          "USER_GUIDE",
+        ].includes(p)
+      )
+  );
+
+  const activePermissions = useMemo(() => {
+    if (isDynamicPermissionsConfigured && currentRoleDef?.permissions) {
+      return currentRoleDef.permissions as string[];
+    }
+    const roleId = currentUser.role_id || "ADMIN_RS";
+    return (ROLE_ALLOWED_MENUS[roleId] || ROLE_ALLOWED_MENUS.ADMIN_RS) as string[];
+  }, [isDynamicPermissionsConfigured, currentRoleDef, currentUser.role_id]);
+
+  const isMenuAllowed = useCallback(
+    (navId: NavSection) => {
+      // Dashboard & Panduan Penggunaan selalu terbuka
+      if (navId === "USER_GUIDE" || navId === "DASHBOARD") return true;
+
+      // Cek apakah menu terdaftar pada izin role yang aktif
+      if (activePermissions.includes(navId)) return true;
+
+      // Untuk Clinical Screening jika sub-menu PE atau HPP diizinkan
+      if (
+        navId === "CLINICAL_SCREENING" &&
+        (activePermissions.includes("PE_SCREENING") ||
+          activePermissions.includes("HPP_SCREENING"))
+      ) {
+        return true;
+      }
+
+      return false;
+    },
+    [activePermissions]
+  );
+
+  // Jika menu yang sedang aktif tidak diizinkan untuk role saat ini, arahkan otomatis ke DASHBOARD
+  useEffect(() => {
+    if (data && isAuthenticated && !isMenuAllowed(activeNav)) {
+      setActiveNav("DASHBOARD");
+    }
+  }, [data, isAuthenticated, activeNav, isMenuAllowed]);
+
   if (loading && !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0b1329] text-white p-6">
@@ -269,152 +418,11 @@ export default function SigapApplicationPage() {
 
   const { db, enriched_admissions: admissions, active_protocol: activeProtocol } =
     data;
-  const currentUser =
-    (db.users || []).find((u) => u.user_id === currentUserId) ||
-    db.users?.[0] || {
-      user_id: "usr-admin",
-      username: "admin",
-      full_name: "Administrator Sistem",
-      role_id: "ADMIN_RS",
-      status: "ACTIVE",
-    };
-  const currentRoleDef = (db.roles || []).find(
-    (r) => r.role_id === currentUser.role_id
-  );
   const selectedAdmission: EnrichedAdmission | undefined =
     (admissions || []).find((a) => a.admission_id === selectedAdmissionId) ||
     admissions?.[0];
 
   const openAlerts = (db.alerts || []).filter((al) => al.status !== "RESOLVED");
-
-  // Pembatasan Menu Berdasarkan Role RBAC Aktif (FR-02 & SRS Bab 3)
-  const ROLE_ALLOWED_MENUS: Record<string, NavSection[]> = {
-    BIDAN_PERAWAT: [
-      "DASHBOARD",
-      "PATIENT_MASTER",
-      "PATIENT_REGISTRATION",
-      "ADMISSION_INPUT",
-      "PATIENT_DISCHARGE_RPP",
-      "CLINICAL_SCREENING",
-      "PE_SCREENING",
-      "HPP_SCREENING",
-      "MONITORING_SBAR",
-      "MASTER_DATA",
-      "USER_GUIDE",
-    ],
-    DOKTER: [
-      "DASHBOARD",
-      "PATIENT_MASTER",
-      "PATIENT_REGISTRATION",
-      "ADMISSION_INPUT",
-      "PATIENT_DISCHARGE_RPP",
-      "CLINICAL_SCREENING",
-      "PE_SCREENING",
-      "HPP_SCREENING",
-      "MONITORING_SBAR",
-      "MASTER_DATA",
-      "USER_GUIDE",
-    ],
-    VALIDATOR_KLINIS: [
-      "DASHBOARD",
-      "PATIENT_MASTER",
-      "PATIENT_DISCHARGE_RPP",
-      "CLINICAL_SCREENING",
-      "PE_SCREENING",
-      "HPP_SCREENING",
-      "MONITORING_SBAR",
-      "PROTOCOL_AUDIT",
-      "MASTER_DATA",
-      "USER_GUIDE",
-    ],
-    ADMIN_RS: [
-      "DASHBOARD",
-      "PATIENT_MASTER",
-      "PATIENT_REGISTRATION",
-      "ADMISSION_INPUT",
-      "PATIENT_DISCHARGE_RPP",
-      "CLINICAL_SCREENING",
-      "PE_SCREENING",
-      "HPP_SCREENING",
-      "MONITORING_SBAR",
-      "PROTOCOL_AUDIT",
-      "MASTER_DATA",
-      "RBAC_MANAGEMENT",
-      "USER_GUIDE",
-    ],
-    ADMIN_TI: [
-      "DASHBOARD",
-      "PATIENT_MASTER",
-      "PATIENT_REGISTRATION",
-      "ADMISSION_INPUT",
-      "PATIENT_DISCHARGE_RPP",
-      "CLINICAL_SCREENING",
-      "PE_SCREENING",
-      "HPP_SCREENING",
-      "MONITORING_SBAR",
-      "PROTOCOL_AUDIT",
-      "MASTER_DATA",
-      "RBAC_MANAGEMENT",
-      "USER_GUIDE",
-    ],
-  };
-
-  // Ambil izin menu secara dinamis dari database (RBAC) jika sudah dikonfigurasi melalui menu Hak Akses
-  const isDynamicPermissionsConfigured =
-    Boolean(currentRoleDef?.permissions &&
-    Array.isArray(currentRoleDef.permissions) &&
-    currentRoleDef.permissions.length > 0 &&
-    currentRoleDef.permissions.some((p) =>
-      [
-        "DASHBOARD",
-        "PATIENT_MASTER",
-        "PATIENT_REGISTRATION",
-        "CLINICAL_SCREENING",
-        "MONITORING_SBAR",
-        "PATIENT_DISCHARGE_RPP",
-        "MASTER_DATA",
-        "PROTOCOL_AUDIT",
-        "RBAC_MANAGEMENT",
-        "USER_GUIDE",
-      ].includes(p)
-    ));
-
-  const activePermissions = useMemo(() => {
-    if (isDynamicPermissionsConfigured && currentRoleDef?.permissions) {
-      return currentRoleDef.permissions as string[];
-    }
-    const roleId = currentUser.role_id || "ADMIN_RS";
-    return (ROLE_ALLOWED_MENUS[roleId] || ROLE_ALLOWED_MENUS.ADMIN_RS) as string[];
-  }, [isDynamicPermissionsConfigured, currentRoleDef, currentUser.role_id]);
-
-  const isMenuAllowed = useCallback(
-    (navId: NavSection) => {
-      // Dashboard & Panduan Penggunaan selalu terbuka
-      if (navId === "USER_GUIDE" || navId === "DASHBOARD") return true;
-
-      // Cek apakah menu terdaftar pada izin role yang aktif
-      if (activePermissions.includes(navId)) return true;
-
-      // Untuk Clinical Screening jika sub-menu PE atau HPP diizinkan
-      if (
-        navId === "CLINICAL_SCREENING" &&
-        (activePermissions.includes("PE_SCREENING") ||
-          activePermissions.includes("HPP_SCREENING"))
-      ) {
-        return true;
-      }
-
-      return false;
-    },
-    [activePermissions]
-  );
-
-  // Jika menu yang sedang aktif tidak diizinkan untuk role saat ini, arahkan otomatis ke DASHBOARD
-  useEffect(() => {
-    if (!isMenuAllowed(activeNav)) {
-      setActiveNav("DASHBOARD");
-    }
-  }, [activeNav, isMenuAllowed]);
 
   return (
     <ShadcnAppShell
