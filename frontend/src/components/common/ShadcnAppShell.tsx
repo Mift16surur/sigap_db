@@ -241,6 +241,20 @@ export function ShadcnAppShell({
     });
   }, [activeNav]);
 
+  // Filter tab agar hanya menu yang diizinkan untuk role saat ini yang tampil
+  useEffect(() => {
+    setOpenTabs((prev) => {
+      const allowed = prev.filter(
+        (t) =>
+          isMenuAllowed(t) ||
+          (t === "CLINICAL_SCREENING" &&
+            (isMenuAllowed("PE_SCREENING") || isMenuAllowed("HPP_SCREENING")))
+      );
+      if (allowed.length === 0) return ["DASHBOARD"];
+      return allowed;
+    });
+  }, [isMenuAllowed]);
+
   // Handler menutup tab
   function handleCloseTab(tabId: NavSection, e: React.MouseEvent) {
     e.stopPropagation();
@@ -456,6 +470,22 @@ export function ShadcnAppShell({
   const currentNavConfig =
     allItems.find((i) => i.id === activeNav) || allItems[0];
 
+  // Filter menu berdasarkan permission role aktif: sembunyikan total menu & kelompok yang tidak diizinkan
+  const visibleNavGroups = React.useMemo(() => {
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          return (
+            isMenuAllowed(item.id) ||
+            (item.id === "CLINICAL_SCREENING" &&
+              (isMenuAllowed("PE_SCREENING") || isMenuAllowed("HPP_SCREENING")))
+          );
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [navGroups, isMenuAllowed]);
+
   const userInitials =
     currentUser.full_name
       .replace(/^(dr\.|Dr\.|Bd\.|Bdn\.|Ns\.)\s*/gi, "")
@@ -541,7 +571,7 @@ export function ShadcnAppShell({
             isCollapsed ? "overflow-visible" : "overflow-y-auto"
           }`}
         >
-          {navGroups.map((group) => (
+          {visibleNavGroups.map((group) => (
             <div key={group.groupLabel} className="space-y-1">
               {!isCollapsed && (
                 <div className="px-3 pt-3 pb-1 text-[10px] font-black text-blue-900/70 dark:text-blue-300/70 uppercase tracking-widest">
@@ -555,10 +585,6 @@ export function ShadcnAppShell({
                     activeNav === item.id ||
                     (item.id === "CLINICAL_SCREENING" &&
                       (activeNav === "PE_SCREENING" || activeNav === "HPP_SCREENING"));
-                  const permitted =
-                    isMenuAllowed(item.id) ||
-                    (item.id === "CLINICAL_SCREENING" &&
-                      (isMenuAllowed("PE_SCREENING") || isMenuAllowed("HPP_SCREENING")));
 
                   if (isCollapsed) {
                     return (
@@ -566,17 +592,13 @@ export function ShadcnAppShell({
                         <button
                           type="button"
                           onClick={() => {
-                            if (permitted) {
-                              setActiveNav(item.id);
-                              setMobileMenuOpen(false);
-                            }
+                            setActiveNav(item.id);
+                            setMobileMenuOpen(false);
                           }}
                           className={`w-full flex items-center justify-center py-2.5 rounded-2xl transition-all cursor-pointer ${
                             isActive
                               ? "bg-white dark:bg-[#0c183a] text-[#185adb] dark:text-blue-400 shadow-xs font-bold border-2 border-blue-300 dark:border-blue-700"
-                              : permitted
-                              ? "text-blue-900/70 dark:text-blue-300/70 hover:text-blue-950 dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/40"
-                              : "text-slate-300 dark:text-slate-600 cursor-not-allowed"
+                              : "text-blue-900/70 dark:text-blue-300/70 hover:text-blue-950 dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-800/40"
                           }`}
                         >
                           <Icon className="h-4 w-4" />
@@ -592,12 +614,7 @@ export function ShadcnAppShell({
                             <span className="text-xs font-bold tracking-wide">
                               {item.label}
                             </span>
-                            {!permitted && (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-rose-500/25 text-rose-300 dark:text-rose-600 font-bold">
-                                Terkunci
-                              </span>
-                            )}
-                            {item.badge && permitted && (
+                            {item.badge && (
                               <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-blue-500/30 dark:bg-blue-100 text-blue-300 dark:text-blue-700 font-mono font-bold">
                                 {item.badge}
                               </span>
@@ -612,14 +629,11 @@ export function ShadcnAppShell({
                     <button
                       key={item.id}
                       type="button"
-                      disabled={!permitted}
                       onClick={() => {
                         setActiveNav(item.id);
                         setMobileMenuOpen(false);
                       }}
-                      className={`w-full text-left transition-all ${
-                        !permitted ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
+                      className="w-full text-left transition-all cursor-pointer"
                     >
                       {isActive ? (
                         /* Active Menu Item: Clean elevated white pill card with vertical blue indicator bar */
@@ -644,11 +658,7 @@ export function ShadcnAppShell({
                             <Icon className="h-4 w-4 text-blue-800/60 dark:text-blue-300/60 shrink-0 group-hover:text-[#185adb] dark:group-hover:text-blue-300 transition-colors" />
                             <span className="truncate">{item.label}</span>
                           </div>
-                          {!permitted ? (
-                            <Lock className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                          ) : (
-                            <ChevronDown className="h-3.5 w-3.5 text-blue-700/50 dark:text-blue-300/50 shrink-0 group-hover:text-[#185adb] transition-colors" />
-                          )}
+                          <ChevronDown className="h-3.5 w-3.5 text-blue-700/50 dark:text-blue-300/50 shrink-0 group-hover:text-[#185adb] transition-colors" />
                         </div>
                       )}
                     </button>

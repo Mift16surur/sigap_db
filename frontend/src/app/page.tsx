@@ -395,6 +395,13 @@ export default function SigapApplicationPage() {
     return false;
   };
 
+  // Jika menu yang sedang aktif tidak diizinkan untuk role saat ini, arahkan otomatis ke DASHBOARD
+  useEffect(() => {
+    if (!isMenuAllowed(activeNav)) {
+      setActiveNav("DASHBOARD");
+    }
+  }, [activeNav, currentUser.role_id, activePermissions]);
+
   return (
     <ShadcnAppShell
       data={data}
