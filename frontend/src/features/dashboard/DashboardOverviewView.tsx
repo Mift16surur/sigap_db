@@ -48,7 +48,7 @@ export function DashboardOverviewView({
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
   // =========================================================================
-  // 1. DATA REAL-TIME: Pasien Sedang Dirawat (Status Aktif)
+  // 1. DATA REAL-TIME: Pasien Aktif & Pembagian Status Skrining
   // =========================================================================
   const activeAdmissions = useMemo(
     () => (admissions || []).filter((adm) => adm.status !== "CLOSED"),
@@ -56,15 +56,31 @@ export function DashboardOverviewView({
   );
   const totalSedangDirawat = activeAdmissions.length;
 
-  // =========================================================================
-  // 2. DATA REAL-TIME: Pasien Belum Diskrining
-  // Pasien aktif yang belum memiliki hasil skrining PE atau HPP
-  // =========================================================================
+  // Pasien Belum Diskrining: Belum ada skrining PE maupun HPP
   const unscreenedAdmissions = useMemo(
     () => activeAdmissions.filter((adm) => !adm.latest_pe_result && !adm.latest_hpp_result),
     [activeAdmissions]
   );
   const totalBelumDiskrining = unscreenedAdmissions.length;
+
+  // Pasien Sedang Diskrining: Salah satu skrining sudah diisi/dalam proses (PE ada tapi HPP belum, atau sebaliknya)
+  const inProgressScreeningAdmissions = useMemo(
+    () =>
+      activeAdmissions.filter(
+        (adm) =>
+          (adm.latest_pe_result && !adm.latest_hpp_result) ||
+          (!adm.latest_pe_result && adm.latest_hpp_result)
+      ),
+    [activeAdmissions]
+  );
+  const totalSedangDiskrining = inProgressScreeningAdmissions.length;
+
+  // Pasien Sudah Diskrining: Skrining lengkap (baik PE maupun HPP telah selesai)
+  const fullyScreenedAdmissions = useMemo(
+    () => activeAdmissions.filter((adm) => adm.latest_pe_result && adm.latest_hpp_result),
+    [activeAdmissions]
+  );
+  const totalSudahDiskrining = fullyScreenedAdmissions.length;
 
   // =========================================================================
   // 3. DATA REAL-TIME: Risiko Tinggi Aktif
@@ -384,27 +400,7 @@ export function DashboardOverviewView({
 
       {/* 3. BARIS 4 KARTU KPI METRIC UTAMA (REAL-TIME DATA) DENGAN BORDER TEMATIK BERBEDA-BEDA */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KARTU 1: Sedang Dirawat (Border Biru) */}
-        <div className="rounded-2xl border-2 border-blue-400 dark:border-blue-600 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-md hover:border-blue-500 transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Sedang Dirawat
-              </span>
-              <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
-                <BedDouble className="h-4.5 w-4.5" />
-              </div>
-            </div>
-            <div className="mt-2.5 text-3xl font-black text-slate-900 dark:text-slate-100 tabular-nums tracking-tight">
-              {totalSedangDirawat}
-            </div>
-          </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 font-medium">
-            Kunjungan berstatus pelayanan aktif
-          </div>
-        </div>
-
-        {/* KARTU 2: Belum Diskrining (Border Kuning / Amber) */}
+        {/* KARTU 1: Belum Diskrining (Border Kuning / Amber) */}
         <div className="rounded-2xl border-2 border-amber-400 dark:border-amber-600 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-md hover:border-amber-500 transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
@@ -422,29 +418,51 @@ export function DashboardOverviewView({
           <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 font-medium">
             {totalBelumDiskrining === 0
               ? "Semua pasien aktif telah diskrining"
-              : `Dari ${totalSedangDirawat} pasien yang sedang dirawat`}
+              : `Dari ${totalSedangDirawat} pasien aktif`}
           </div>
         </div>
 
-        {/* KARTU 3: Risiko Tinggi Aktif (Border Merah / Rose) */}
-        <div className="rounded-2xl border-2 border-rose-400 dark:border-rose-600 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-md hover:border-rose-500 transition-all flex flex-col justify-between">
+        {/* KARTU 2: Sedang Diskrining (Border Biru) */}
+        <div className="rounded-2xl border-2 border-blue-400 dark:border-blue-600 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-md hover:border-blue-500 transition-all flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Risiko Tinggi Aktif
+                Sedang Diskrining
               </span>
-              <div className="h-9 w-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center justify-center">
-                <ShieldAlert className="h-4.5 w-4.5" />
+              <div className="h-9 w-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
+                <Activity className="h-4.5 w-4.5" />
               </div>
             </div>
-            <div className="mt-2.5 text-3xl font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tight">
-              {totalRisikoTinggi}
+            <div className="mt-2.5 text-3xl font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tight">
+              {totalSedangDiskrining}
+            </div>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 font-medium">
+            {totalSedangDiskrining === 0
+              ? "Tidak ada proses skrining tertunda"
+              : "Tahap 1 PE atau Tahap 2 HPP aktif"}
+          </div>
+        </div>
+
+        {/* KARTU 3: Sudah Diskrining (Border Hijau / Emerald) */}
+        <div className="rounded-2xl border-2 border-emerald-400 dark:border-emerald-600 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-md hover:border-emerald-500 transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Sudah Diskrining
+              </span>
+              <div className="h-9 w-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center">
+                <CheckCircle2 className="h-4.5 w-4.5" />
+              </div>
+            </div>
+            <div className="mt-2.5 text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight">
+              {totalSudahDiskrining}
             </div>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 font-medium">
             {totalSedangDirawat > 0
-              ? `Pasien dirawat berisiko tinggi (${Math.round((totalRisikoTinggi / totalSedangDirawat) * 100)}% dari aktif)`
-              : "Tidak ada pasien berisiko tinggi"}
+              ? `Skrining lengkap (${Math.round((totalSudahDiskrining / totalSedangDirawat) * 100)}% dari aktif)`
+              : "Skrining PE & HPP tuntas"}
           </div>
         </div>
 
@@ -469,16 +487,16 @@ export function DashboardOverviewView({
         </div>
       </div>
 
-      {/* 4. BARIS TENGAH (2 KOLOM): Pasien Sedang Dirawat vs Admisi & Skrining 7 Hari */}
+      {/* 4. BARIS TENGAH (2 KOLOM): Pasien Sedang Diskrining vs Admisi & Skrining 7 Hari */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* KOLOM KIRI: Pasien Sedang Dirawat (Menurut Risiko Tertinggi) */}
+        {/* KOLOM KIRI: Pasien Sedang Diskrining (Menurut Risiko Tertinggi) */}
         <div className="rounded-2xl border-2 border-blue-400/90 dark:border-blue-600 bg-white dark:bg-slate-900 p-5 md:p-6 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-blue-100 dark:border-blue-900/60 pb-3 mb-5">
               <div>
                 <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
                   <Activity className="h-4 w-4 text-blue-600" />
-                  <span>Pasien Sedang Dirawat</span>
+                  <span>Pasien Sedang Diskrining</span>
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Distribusi menurut level risiko tertinggi dari skrining klinis tiap pasien
@@ -569,7 +587,7 @@ export function DashboardOverviewView({
           </div>
 
           <div className="mt-6 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400">
-            Menampilkan {totalSedangDirawat} kunjungan aktif saat ini dari {(admissions || []).length} total riwayat admisi.
+            Menampilkan {totalSedangDirawat} pasien aktif saat ini dari {(admissions || []).length} total riwayat admisi.
           </div>
         </div>
 
