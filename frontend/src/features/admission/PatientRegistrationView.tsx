@@ -694,7 +694,7 @@ export function PatientRegistrationView({
                 >
                   {db.patients.map((pat) => (
                     <option key={pat.patient_id} value={pat.patient_id}>
-                      {pat.full_name} — No. RM: {pat.mrn} (Usia: {pat.age_years} th • Gol. Darah: {pat.golongan_darah || "O+"})
+                      {pat.full_name}
                     </option>
                   ))}
                 </select>
@@ -712,7 +712,7 @@ export function PatientRegistrationView({
                         {selectedPatient.full_name}
                       </div>
                       <div className="text-[11px] text-slate-500 font-mono">
-                        No. RM: <strong className="text-blue-700 dark:text-blue-400">{selectedPatient.mrn}</strong> • NIK: {selectedPatient.nik_masked || "-"} • Usia: {selectedPatient.age_years} Tahun
+                        No. RM: <strong className="text-blue-700 dark:text-blue-400">{selectedPatient.mrn}</strong> • NIK: {selectedPatient.nik_masked || "-"} • Usia: {selectedPatient.age_years} Tahun • Gol. Darah: {selectedPatient.golongan_darah || "O+"}
                       </div>
                     </div>
                   </div>
