@@ -250,8 +250,15 @@ export function ShadcnAppShell({
           (t === "CLINICAL_SCREENING" &&
             (isMenuAllowed("PE_SCREENING") || isMenuAllowed("HPP_SCREENING")))
       );
-      if (allowed.length === 0) return ["DASHBOARD"];
-      return allowed;
+      const safeAllowed: NavSection[] =
+        allowed.length === 0 ? (["DASHBOARD"] as NavSection[]) : allowed;
+      if (
+        safeAllowed.length === prev.length &&
+        safeAllowed.every((val, idx) => val === prev[idx])
+      ) {
+        return prev;
+      }
+      return safeAllowed;
     });
   }, [isMenuAllowed]);
 
@@ -329,7 +336,7 @@ export function ShadcnAppShell({
   const navGroups: Array<{
     groupLabel: string;
     items: NavItemConfig[];
-  }> = [
+  }> = React.useMemo(() => [
     {
       groupLabel: "UTAMA",
       items: [
@@ -353,7 +360,7 @@ export function ShadcnAppShell({
           shortLabel: "Master",
           group: "ALUR PELAYANAN",
           icon: Users,
-          badge: db.patients.length > 0 ? db.patients.length : undefined,
+          badge: (db.patients || []).length > 0 ? db.patients.length : undefined,
           badgeVariant: "secondary",
         },
         {
@@ -363,7 +370,7 @@ export function ShadcnAppShell({
           group: "ALUR PELAYANAN",
           icon: ClipboardPlus,
           badge:
-            admissions.filter((a) => a.status === "ACTIVE").length > 0
+            (admissions || []).filter((a) => a.status === "ACTIVE").length > 0
               ? admissions.filter((a) => a.status === "ACTIVE").length
               : undefined,
           badgeVariant: "secondary",
@@ -410,7 +417,7 @@ export function ShadcnAppShell({
           group: "SKRINING & KLINIS",
           icon: FileCheck,
           badge:
-            admissions.filter((a) => a.status === "CLOSED").length > 0
+            (admissions || []).filter((a) => a.status === "CLOSED").length > 0
               ? admissions.filter((a) => a.status === "CLOSED").length
               : undefined,
           badgeVariant: "outline",
@@ -433,7 +440,7 @@ export function ShadcnAppShell({
           shortLabel: "Audit",
           group: "MUTU & KINERJA",
           icon: Settings,
-          badge: activeProtocol.version,
+          badge: activeProtocol?.version,
           badgeVariant: "outline",
         },
       ],
@@ -464,9 +471,18 @@ export function ShadcnAppShell({
         },
       ],
     },
-  ];
+  ], [
+    openAlertsCount,
+    (db.patients || []).length,
+    admissions,
+    selectedAdmission?.admission_id,
+    selectedAdmission?.latest_pe_result?.category,
+    selectedAdmission?.latest_hpp_result?.category,
+    selectedAdmission?.cumulative_blood_loss_ml,
+    activeProtocol?.version,
+  ]);
 
-  const allItems = navGroups.flatMap((g) => g.items);
+  const allItems = React.useMemo(() => navGroups.flatMap((g) => g.items), [navGroups]);
   const currentNavConfig =
     allItems.find((i) => i.id === activeNav) || allItems[0];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -270,15 +270,22 @@ export default function SigapApplicationPage() {
   const { db, enriched_admissions: admissions, active_protocol: activeProtocol } =
     data;
   const currentUser =
-    db.users.find((u) => u.user_id === currentUserId) || db.users[0];
-  const currentRoleDef = db.roles.find(
+    (db.users || []).find((u) => u.user_id === currentUserId) ||
+    db.users?.[0] || {
+      user_id: "usr-admin",
+      username: "admin",
+      full_name: "Administrator Sistem",
+      role_id: "ADMIN_RS",
+      status: "ACTIVE",
+    };
+  const currentRoleDef = (db.roles || []).find(
     (r) => r.role_id === currentUser.role_id
   );
   const selectedAdmission: EnrichedAdmission | undefined =
-    admissions.find((a) => a.admission_id === selectedAdmissionId) ||
-    admissions[0];
+    (admissions || []).find((a) => a.admission_id === selectedAdmissionId) ||
+    admissions?.[0];
 
-  const openAlerts = db.alerts.filter((al) => al.status !== "RESOLVED");
+  const openAlerts = (db.alerts || []).filter((al) => al.status !== "RESOLVED");
 
   // Pembatasan Menu Berdasarkan Role RBAC Aktif (FR-02 & SRS Bab 3)
   const ROLE_ALLOWED_MENUS: Record<string, NavSection[]> = {
@@ -354,7 +361,7 @@ export default function SigapApplicationPage() {
 
   // Ambil izin menu secara dinamis dari database (RBAC) jika sudah dikonfigurasi melalui menu Hak Akses
   const isDynamicPermissionsConfigured =
-    currentRoleDef?.permissions &&
+    Boolean(currentRoleDef?.permissions &&
     Array.isArray(currentRoleDef.permissions) &&
     currentRoleDef.permissions.length > 0 &&
     currentRoleDef.permissions.some((p) =>
@@ -370,37 +377,44 @@ export default function SigapApplicationPage() {
         "RBAC_MANAGEMENT",
         "USER_GUIDE",
       ].includes(p)
-    );
+    ));
 
-  const activePermissions = isDynamicPermissionsConfigured
-    ? (currentRoleDef!.permissions as string[])
-    : ((ROLE_ALLOWED_MENUS[currentUser.role_id] || ROLE_ALLOWED_MENUS.ADMIN_RS) as string[]);
-
-  const isMenuAllowed = (navId: NavSection) => {
-    // Dashboard & Panduan Penggunaan selalu terbuka
-    if (navId === "USER_GUIDE" || navId === "DASHBOARD") return true;
-
-    // Cek apakah menu terdaftar pada izin role yang aktif
-    if (activePermissions.includes(navId)) return true;
-
-    // Untuk Clinical Screening jika sub-menu PE atau HPP diizinkan
-    if (
-      navId === "CLINICAL_SCREENING" &&
-      (activePermissions.includes("PE_SCREENING") ||
-        activePermissions.includes("HPP_SCREENING"))
-    ) {
-      return true;
+  const activePermissions = useMemo(() => {
+    if (isDynamicPermissionsConfigured && currentRoleDef?.permissions) {
+      return currentRoleDef.permissions as string[];
     }
+    const roleId = currentUser.role_id || "ADMIN_RS";
+    return (ROLE_ALLOWED_MENUS[roleId] || ROLE_ALLOWED_MENUS.ADMIN_RS) as string[];
+  }, [isDynamicPermissionsConfigured, currentRoleDef, currentUser.role_id]);
 
-    return false;
-  };
+  const isMenuAllowed = useCallback(
+    (navId: NavSection) => {
+      // Dashboard & Panduan Penggunaan selalu terbuka
+      if (navId === "USER_GUIDE" || navId === "DASHBOARD") return true;
+
+      // Cek apakah menu terdaftar pada izin role yang aktif
+      if (activePermissions.includes(navId)) return true;
+
+      // Untuk Clinical Screening jika sub-menu PE atau HPP diizinkan
+      if (
+        navId === "CLINICAL_SCREENING" &&
+        (activePermissions.includes("PE_SCREENING") ||
+          activePermissions.includes("HPP_SCREENING"))
+      ) {
+        return true;
+      }
+
+      return false;
+    },
+    [activePermissions]
+  );
 
   // Jika menu yang sedang aktif tidak diizinkan untuk role saat ini, arahkan otomatis ke DASHBOARD
   useEffect(() => {
     if (!isMenuAllowed(activeNav)) {
       setActiveNav("DASHBOARD");
     }
-  }, [activeNav, currentUser.role_id, activePermissions]);
+  }, [activeNav, isMenuAllowed]);
 
   return (
     <ShadcnAppShell
