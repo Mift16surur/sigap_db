@@ -585,7 +585,7 @@ export function PatientRegistrationView({
         <div className="rounded-2xl border-2 border-emerald-200/90 dark:border-emerald-900/80 bg-white dark:bg-[#0c183a] p-3.5 shadow-[0_4px_20px_rgba(20,160,100,0.06)] flex items-center justify-between">
           <div>
             <div className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              Sedang Dirawat
+              Sedang Diskrining
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               {activeCount}
